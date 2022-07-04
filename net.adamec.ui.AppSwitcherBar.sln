@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32602.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "net.adamec.ui.AppSwitcherBar", "net.adamec.ui.AppSwitcherBar\net.adamec.ui.AppSwitcherBar.csproj", "{5DBC29F1-8679-4493-B8FC-3910F25CD07F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{010ED3F4-A282-4437-9F4D-FD33B18EC0CB}"
+	ProjectSection(SolutionItems) = preProject
+		readme.md = readme.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5DBC29F1-8679-4493-B8FC-3910F25CD07F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DBC29F1-8679-4493-B8FC-3910F25CD07F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DBC29F1-8679-4493-B8FC-3910F25CD07F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DBC29F1-8679-4493-B8FC-3910F25CD07F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7993FAC2-60BF-4BAE-9883-D03962B7495C}
+	EndGlobalSection
+EndGlobal

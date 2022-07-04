@@ -1,0 +1,197 @@
+﻿<appBar:AppBarWindow
+    x:Class="net.adamec.ui.AppSwitcherBar.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+    xmlns:appBar="clr-namespace:net.adamec.ui.AppSwitcherBar.AppBar"
+    xmlns:viewModel="clr-namespace:net.adamec.ui.AppSwitcherBar.ViewModel"
+    xmlns:wpf="clr-namespace:net.adamec.ui.AppSwitcherBar.Wpf"
+    mc:Ignorable="d"
+    x:Name="Root"
+    Title="MainWindow">
+    <appBar:AppBarWindow.Resources>
+        <viewModel:ViewModelLocator x:Key="ViewModelLocator" />
+    </appBar:AppBarWindow.Resources>
+    <appBar:AppBarWindow.DataContext>
+        <Binding Source="{StaticResource ViewModelLocator}" Path="MainViewModel" />
+    </appBar:AppBarWindow.DataContext>
+    <DockPanel >
+        <Thumb Background="Gray" DragCompleted="ResizeDragCompleted" DragDelta="ResizeDragDelta" DragStarted="ResizeDragStarted">
+            <Thumb.Style>
+                <Style TargetType="{x:Type Thumb}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                            <Setter Property="Width" Value="5" />
+                            <Setter Property="DockPanel.Dock" Value="Right" />
+                            <Setter Property="Cursor" Value="SizeWE" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                            <Setter Property="Width" Value="5" />
+                            <Setter Property="DockPanel.Dock" Value="Left" />
+                            <Setter Property="Cursor" Value="SizeWE" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                            <Setter Property="Height" Value="5" />
+                            <Setter Property="DockPanel.Dock" Value="Bottom" />
+                            <Setter Property="Cursor" Value="SizeNS" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                            <Setter Property="Height" Value="5" />
+                            <Setter Property="DockPanel.Dock" Value="Top" />
+                            <Setter Property="Cursor" Value="SizeNS" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Thumb.Style>
+        </Thumb>
+
+        <WrapPanel Margin="3">
+            <WrapPanel.Style>
+                <Style TargetType="{x:Type WrapPanel}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                            <Setter Property="Orientation" Value="Horizontal" />
+                            <Setter Property="DockPanel.Dock" Value="Top" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                            <Setter Property="Orientation" Value="Horizontal" />
+                            <Setter Property="DockPanel.Dock" Value="Top" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                            <Setter Property="Orientation" Value="Vertical" />
+                            <Setter Property="DockPanel.Dock" Value="Left" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                            <Setter Property="Orientation" Value="Vertical" />
+                            <Setter Property="DockPanel.Dock" Value="Left" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </WrapPanel.Style>
+            <Button Click="Close" Content="{iconPacks:BootstrapIcons Kind=X}" Margin="1"/>
+            <ToggleButton Content="{iconPacks:BootstrapIcons Kind=Gear}" x:Name="SettingToggle" Margin="1" />
+        </WrapPanel>
+
+        <WrapPanel Margin="3"  >
+            <WrapPanel.Style>
+                <Style TargetType="{x:Type WrapPanel}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                            <Setter Property="Orientation" Value="Horizontal" />
+                            <Setter Property="DockPanel.Dock" Value="Top" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                            <Setter Property="Orientation" Value="Horizontal" />
+                            <Setter Property="DockPanel.Dock" Value="Top" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                            <Setter Property="Orientation" Value="Vertical" />
+                            <Setter Property="DockPanel.Dock" Value="Left" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                            <Setter Property="Orientation" Value="Vertical" />
+                            <Setter Property="DockPanel.Dock" Value="Left" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsChecked, ElementName=SettingToggle}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsChecked, ElementName=SettingToggle}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </WrapPanel.Style>
+            <StackPanel Orientation="Horizontal" Margin="1" >
+                <iconPacks:PackIconBootstrapIcons Kind="LayoutSidebarInset" Margin="1" VerticalAlignment="Center" />
+                <ComboBox ItemsSource="{Binding Edges}" SelectedItem="{Binding Path=DockMode, ElementName=Root, Mode=TwoWay}" Margin="1" VerticalAlignment="Center" Width="100"  />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="1" >
+                <iconPacks:PackIconBootstrapIcons Kind="Display" Margin="1" VerticalAlignment="Center" />
+                <ComboBox ItemsSource="{Binding AllMonitors}" SelectedItem="{Binding Path=Monitor, ElementName=Root, Mode=TwoWay}" Margin="1" VerticalAlignment="Center" Width="100"  />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="1" >
+                <iconPacks:PackIconBootstrapIcons Kind="CardList" Margin="1" VerticalAlignment="Center" />
+                <Button Content="Refresh" Command="{Binding RefreshWindowCollectionCommand}"  CommandParameter="true" Margin="1" Width="100"/>
+            </StackPanel>
+
+        </WrapPanel>
+
+        <WrapPanel>
+            <WrapPanel.Style>
+                <Style TargetType="{x:Type WrapPanel}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                            <Setter Property="Orientation" Value="Vertical" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                            <Setter Property="Orientation" Value="Vertical" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                            <Setter Property="Orientation" Value="Horizontal" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                            <Setter Property="Orientation" Value="Horizontal" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </WrapPanel.Style>
+
+            <ItemsControl Margin="5" ItemsSource="{Binding AllWindows}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate  >
+                        <Button Margin="1"
+                                Command="{Binding Path=DataContext.ToggleApplicationWindowCommand, ElementName=Root}" CommandParameter="{Binding Path=Hwnd}"
+                                ToolTip="{Binding Path=Title}" 
+                                Width="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
+                                MaxWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}" 
+                                MinWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
+                                VerticalContentAlignment="Center" HorizontalContentAlignment="Left" x:Name="WndButton">
+                            <Button.Style>
+                                <Style TargetType="{x:Type Button}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Path=IsForeground}" Value="True">
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                            <Setter Property="BorderThickness" Value="2" />
+                                            <Setter Property="Background" Value="Navy" />
+                                            <Setter Property="Foreground" Value="White" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <Grid Margin="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Image Grid.Column="0" Source="{Binding Path=BitmapSource}" Width="16" Height="16" Stretch="Fill"  Margin="0,0,5,0" />
+                                <TextBlock Grid.Column="1" Text="{Binding Path=Title}" TextTrimming="CharacterEllipsis"/>
+                                <wpf:ThumbnailPopup IsOpen="{Binding ElementName=WndButton, Path=IsMouseOver, Mode=OneWay}"
+                                                    SourceHwnd="{Binding Path=Hwnd}"
+                                                    ThumbnailShowCommand="{Binding Path=DataContext.ShowThumbnailCommand, ElementName=Root}"
+                                                    ThumbnailHideCommand="{Binding Path=DataContext.HideThumbnailCommand, ElementName=Root}"
+                                                    HorizontalOffset="0"
+                                                    VerticalOffset="-1"
+                                                    AllowsTransparency="True"
+                                                    Width="{Binding Path=Settings.AppBarThumbnailWidth ,ElementName=Root}"
+                                                    Height="{Binding Path=Settings.AppBarThumbnailHeight ,ElementName=Root}"
+                                                    PlacementTarget="{Binding ElementName=WndButton}">
+                                    <Border BorderThickness="1" BorderBrush="Gainsboro" Background="WhiteSmoke" CornerRadius="5">
+
+                                    </Border>
+                                </wpf:ThumbnailPopup>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </WrapPanel>
+    </DockPanel>
+</appBar:AppBarWindow>
