@@ -1,23 +1,32 @@
 ﻿using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Media.Imaging;
+using System.Windows.Media;
 using System.Windows.Threading;
+using MahApps.Metro.IconPacks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using net.adamec.ui.AppSwitcherBar.AppBar;
 using net.adamec.ui.AppSwitcherBar.Config;
 using net.adamec.ui.AppSwitcherBar.Dto;
-using net.adamec.ui.AppSwitcherBar.Win32;
-using net.adamec.ui.AppSwitcherBar.Win32.ShellExt;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces.Extensions;
+using net.adamec.ui.AppSwitcherBar.Win32.Services;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell.Properties;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Startup;
 using net.adamec.ui.AppSwitcherBar.Wpf;
-using static net.adamec.ui.AppSwitcherBar.Win32.Win32Consts;
+
+// ReSharper disable StringLiteralTypo
+// ReSharper disable IdentifierTypo
+// ReSharper disable CommentTypo
 
 namespace net.adamec.ui.AppSwitcherBar.ViewModel
 {
@@ -28,69 +37,6 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
     /// </summary>
     public partial class MainViewModel : INotifyPropertyChanged
     {
-        #region Logging
-        /// <summary>
-        /// Logger used
-        /// </summary>
-        private readonly ILogger logger;
-
-        /// <summary>
-        /// Logs record (Critical) about the wrong parameter of <see cref="ShowThumbnailCommand"/> (null or wrong type)
-        /// </summary>
-        /// <param name="commandParameterTypeName">Name of expected <see cref="Type"/> of the command parameter value</param>
-        [LoggerMessage(
-            EventId = 900,
-            Level = LogLevel.Critical,
-            Message = "Command parameter must be `{commandParameterTypeName}`")]
-        private partial void LogWrongCommandParameter(string commandParameterTypeName);
-
-        /// <summary>
-        /// Logs record (Debug) when a window thumbnail is shown in popup
-        /// </summary>
-        /// <param name="sourceHwnd">HWND of the source window to present within the popup as a thumbnail</param>
-        /// <param name="targetHwnd">HWND of the popup (thumbnail target)</param>
-        /// <param name="targetRegion"><see cref="RECT"/> region of popup where to rended the thumbnail to</param>
-        /// <param name="thumbnailHandle">Handle of the thumbnail returned from DWM api</param>
-        [LoggerMessage(
-            EventId = 101,
-            Level = LogLevel.Debug,
-            Message = "Show thumbnail of hwnd:{sourceHwnd} in hwnd:{targetHwnd} {targetRegion} - handle is #{thumbnailHandle}")]
-        private partial void LogShowThumbnail(IntPtr sourceHwnd, IntPtr targetHwnd, RECT targetRegion, IntPtr thumbnailHandle);
-
-        /// <summary>
-        /// Logs record (Debug) when a window thumbnail is unregitered (hidden)
-        /// </summary>
-        /// <param name="thumbnailHandle">Handle of the thumbnail</param>
-        [LoggerMessage(
-            EventId = 102,
-            Level = LogLevel.Debug,
-            Message = "Hide (unregister) thumnail #{thumbnailHandle}")]
-        private partial void LogHideThumbnail(IntPtr thumbnailHandle);
-
-        /// <summary>
-        /// Logs record (Information) after switching the foreground app window based on the user interaction (click to app button) 
-        /// </summary>
-        /// <param name="appHwnd">HWND of the application window switched to foreground</param>
-        /// <param name="title">Title of the application window switched to foreground</param>
-        /// <param name="isMinimized">Information whether the application was minimized before the switch</param>
-        [LoggerMessage(
-            EventId = 201,
-            Level = LogLevel.Information,
-            Message = "Switched to app {title} (hwnd:{appHwnd}). Was minimized before: {isMinimized}")]
-        private partial void LogSwitchApp(IntPtr appHwnd, string title, bool isMinimized);
-
-        /// <summary>
-        /// Logs record (Information) after minimizing the app window based on the user interaction (click to app button) 
-        /// </summary>
-        /// <param name="appHwnd">HWND of the minimized application window</param>
-        /// <param name="title">Title of the minimized application window</param>
-        [LoggerMessage(
-            EventId = 202,
-            Level = LogLevel.Information,
-            Message = "App {title} (hwnd:{appHwnd}) was minimized")]
-        private partial void LogMinimizeApp(IntPtr appHwnd, string title);
-        #endregion 
-
         /// <summary>
         /// Native handle (HWND) of the <see cref="MainWindow"/>
         /// </summary>
@@ -101,14 +47,41 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         private IntPtr thumbnailHandle;
 
         /// <summary>
-        /// Native window style to recognize the top-level application window (WS_BORDER | WS_VISIBLE | WS_EX_APPWINDOW - all must apply)
-        /// </summary>
-        private const ulong NATIVE_WINDOW_STYLE_FILTER = WS_BORDER | WS_VISIBLE | WS_EX_APPWINDOW;
-
-        /// <summary>
         /// <see cref="DispatcherTimer"/> used to periodically pull (refresh) the information about (open) application windows
         /// </summary>
         private readonly DispatcherTimer timer;
+
+        /// <summary>
+        /// <see cref="BackgroundWorker"/> used to retrieve helper data on background
+        /// </summary>
+        private readonly BackgroundWorker backgroundInitWorker;
+
+        /// <summary>
+        /// Flag whether the background data have been retrieved 
+        /// </summary>
+        private bool backgroundDataRetrieved;
+
+        /// <summary>
+        /// Flag whether the background data have been retrieved 
+        /// </summary>
+        public bool BackgroundDataRetrieved
+        {
+            get => backgroundDataRetrieved;
+            set
+            {
+                if (backgroundDataRetrieved != value)
+                {
+                    backgroundDataRetrieved = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Flag whether the <see cref="RefreshAllWindowsCollection"/> method is run for the first time
+        /// </summary>
+        private bool isFirstRun = true;
+
 
         /// <summary>
         /// Native handle of the last known foreground window
@@ -116,14 +89,56 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         private IntPtr lastForegroundWindow = IntPtr.Zero;
 
         /// <summary>
+        /// Information about the applications installed in system
+        /// </summary>
+        private readonly InstalledApplications installedApplications = new();
+
+        /// <summary>
+        /// Information about the known folder paths and GUIDs
+        /// </summary>
+        private StringGuidPair[] knownFolders = Array.Empty<StringGuidPair>();
+
+        /// <summary>
+        /// Dictionary of known AppIds from configuration containing pairs executable-appId (the key is in lower case)
+        /// When built from configuration, the record (key) is created for full path from config and another one without a path (file name only) if applicable
+        /// </summary>
+        private readonly Dictionary<string, string> knownAppIds = new();
+
+        /// <summary>
         /// Application settings
         /// </summary>
         public IAppSettings Settings { get; }
 
+
+        /// <summary>
+        /// Flag whether the option to set Run On Windows Startup is available
+        /// </summary>
+        public bool RunOnWinStartupAvailable => Settings.AllowRunOnWindowsStartup;
+
+        /// <summary>
+        /// Flag whether the AppSwitcherBar is set to run on Windows startup
+        /// </summary>
+        public bool runOnWinStartupSet;
+        /// <summary>
+        /// Flag whether the AppSwitcherBar is set to run on Windows startup
+        /// </summary>
+        public bool RunOnWinStartupSet
+        {
+            get => runOnWinStartupSet;
+            set
+            {
+                if (runOnWinStartupSet != value)
+                {
+                    runOnWinStartupSet = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         /// <summary>
         /// Array of the screen edges the app-bar can be docked to
         /// </summary>
-        public AppBarDockMode[] Edges { get; } = new[]{
+        public AppBarDockMode[] Edges { get; } = {
             AppBarDockMode.Left,
             AppBarDockMode.Right,
             AppBarDockMode.Top,
@@ -135,9 +150,9 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public MonitorInfo[] AllMonitors { get; }
 
         /// <summary>
-        /// All application windows to be presented as application buttons 
+        /// Application window buttons group manager
         /// </summary>
-        public ObservableCollection<WndInfo> AllWindows { get; } = new ObservableCollection<WndInfo>();
+        public WndButtonManager ButtonManager { get; } = new();
 
         /// <summary>
         /// Command requesting an "ad-hoc" refresh of the list of application windows (no param used)
@@ -160,39 +175,90 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public ICommand HideThumbnailCommand { get; }
 
         /// <summary>
+        /// Command requesting to build the context menu for application window button
+        /// </summary>
+        public ICommand BuildContextMenuCommand { get; }
+
+        /// <summary>
+        /// Command requesting to toggle Run on Windows startup - set/remove the startup link
+        /// </summary>
+        public ICommand ToggleRunOnStartupCommand { get; }
+
+        /// <summary>
+        /// JumpList service to be used
+        /// </summary>
+        private readonly IJumpListService jumpListService;
+
+        /// <summary>
+        /// Startup service to be used
+        /// </summary>
+        private readonly IStartupService startupService;
+
+        /// <summary>
         /// Internal CTOR
         /// Directly used by <see cref="ViewModelLocator"/> when creating a design time instance.
         /// Internally called by public "DI bound" CTOR
         /// </summary>
         /// <param name="settings">Application setting</param>
         /// <param name="logger">Logger to be used</param>
-        internal MainViewModel(AppSettings settings, ILogger logger)
+        /// <param name="jumpListService">JumpList service to be used</param>
+        /// <param name="startupService">Startup service to be used</param>
+        internal MainViewModel(IAppSettings settings, ILogger logger, IJumpListService jumpListService, IStartupService startupService)
         {
             this.logger = logger;
+            this.jumpListService = jumpListService;
+            this.startupService = startupService;
+
             Settings = settings;
-            AllMonitors = MonitorInfo.GetAllMonitors().ToArray();
+            AllMonitors = Monitor.GetAllMonitors();
             RefreshWindowCollectionCommand = new RelayCommand(RefreshAllWindowsCollection);
             ToggleApplicationWindowCommand = new RelayCommand(ToggleApplicationWindow);
             ShowThumbnailCommand = new RelayCommand(ShowThumbnail);
-            HideThumbnailCommand = new RelayCommand(UnregisterThumbnail);
+            HideThumbnailCommand = new RelayCommand(HideThumbnail);
+            BuildContextMenuCommand = new RelayCommand(BuildContextMenu);
+            ToggleRunOnStartupCommand = new RelayCommand(ToggleRunOnWinStartup);
+
+            runOnWinStartupSet = startupService.HasAppStartupLink();
+
+            if (settings.AppIds != null)
+            {
+                foreach (var (executable, appId) in settings.AppIds)
+                {
+                    var keyFullPath = Environment.ExpandEnvironmentVariables(executable).Replace('/', '\\').ToLowerInvariant();
+                    knownAppIds[keyFullPath] = appId;
+
+                    var keyFileOnly = Path.GetFileName(keyFullPath);
+                    knownAppIds[keyFileOnly] = appId;
+                }
+            }
+            //make sure the explorer is there!
+            var explorerExecutable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe").ToLowerInvariant();
+            knownAppIds[explorerExecutable] = "Microsoft.Windows.Explorer";
+
 
             timer = new DispatcherTimer(DispatcherPriority.Render)
             {
                 Interval = TimeSpan.FromMilliseconds(Settings.RefreshWindowInfosIntervalMs)
             };
-            timer.Tick += (_, _) =>
-            {
-                RefreshAllWindowsCollection(false);
-            };
+            timer.Tick += (_, _) => { RefreshAllWindowsCollection(false); };
 
+            backgroundInitWorker = new BackgroundWorker();
+            backgroundInitWorker.DoWork += (_, eventArgs) => { eventArgs.Result = RetrieveBackgroundData(); };
+            backgroundInitWorker.RunWorkerCompleted += (_, eventArgs) => { OnBackgroundDataRetrieved((BackgroundData)eventArgs.Result!); };
+            this.startupService = startupService;
         }
+
 
         /// <summary>
         /// CTOR used by DI
         /// </summary>
         /// <param name="options">Application settings configuration</param>
         /// <param name="logger">Logger to be used</param>
-        public MainViewModel(IOptions<AppSettings> options, ILogger<MainViewModel> logger) : this(options.Value, logger)
+        /// <param name="jumpListService">JumpList service to be used</param>
+        /// <param name="startupService">Startup service to be used</param>
+        // ReSharper disable once UnusedMember.Global
+        public MainViewModel(IOptions<AppSettings> options, ILogger<MainViewModel> logger, IJumpListService jumpListService, IStartupService startupService)
+            : this(options.Value, logger, jumpListService, startupService)
         {
             //used from DI - DI populates the parameters and the internal CTOR is called then
         }
@@ -206,196 +272,232 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public void Init(IntPtr mainWndHwnd)
         {
             mainWindowHwnd = mainWndHwnd;
+
             timer.Start();
         }
 
         /// <summary>
-        /// Pulls the information about available application windows and updates <see cref="AllWindows"/> collection.
+        /// Retrieve helper data on background
         /// </summary>
-        /// <param name="hardRefresh">When the parameter is bool and true, it forces the hard refresh - the <see cref="AllWindows"/> collection is cleared first. 
-        /// Otherwise it's just updated</param>
+        internal BackgroundData? RetrieveBackgroundData()
+        {
+            var timestampStart = DateTime.Now;
+            var timestampEndInstalledApps = DateTime.MinValue;
+            var timestampEndKnownFolders = DateTime.MinValue;
+
+            bool isSuccess;
+            string resultMsg;
+            BackgroundData? data = null;
+
+            try
+            {
+                //retrieve installed apps -> AUMIs, icons
+                var dataInstalledApps = new List<InstalledApplication>();
+                var appsFolder = Shell.GetAppsFolder();
+                if (appsFolder != null)
+                {
+                    Shell.EnumShellItems(appsFolder, item =>
+                     {
+
+                         var appName = item.GetDisplayName();
+                         var propertyStore = item.GetPropertyStore();
+
+                         var shellProperties = propertyStore?.GetProperties() ?? new Properties(); //empty object
+                         var appUserModelId = shellProperties.ApplicationUserModelId;
+                         var iconSource = Shell.GetShellItemBitmapSource(item, 32);
+                         var lnk = propertyStore?.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath);
+
+                         dataInstalledApps.Add(new InstalledApplication(appName, appUserModelId, lnk, iconSource, shellProperties));
+                         LogInstalledAppInfo(appName, appUserModelId ?? "[Unknown]", iconSource != null, lnk ?? "[N/A]");
+                     });
+                }
+
+                timestampEndInstalledApps = DateTime.Now;
+
+                //retrieve known folders
+                var dataKnownFolders = Shell.GetKnownFolders();
+                timestampEndKnownFolders = DateTime.Now;
+
+                data = new BackgroundData(dataInstalledApps.ToArray(), dataKnownFolders);
+                resultMsg = "OK";
+                isSuccess = true;
+            }
+            catch (Exception ex)
+            {
+                isSuccess = false;
+                resultMsg = $"{ex.GetType().Name}: {ex.Message}";
+            }
+
+            var durationInstalledApps = (timestampEndInstalledApps - timestampStart).TotalMilliseconds;
+            var durationKnownFolders = (timestampEndKnownFolders - timestampEndInstalledApps).TotalMilliseconds;
+            var durationTotal = durationInstalledApps + durationKnownFolders;
+
+            LogBackgroundDataInitTelemetry(
+                isSuccess ? LogLevel.Information : LogLevel.Error,
+                DateTime.Now, isSuccess, resultMsg,
+                (int)durationTotal, (int)durationInstalledApps, (int)durationKnownFolders);
+
+            return data;
+        }
+
+        /// <summary>
+        /// Called when the background data have been retrieved - "copy" them to view model 
+        /// </summary>
+        /// <param name="data">Retrieved background data or null when not available</param>
+        internal void OnBackgroundDataRetrieved(BackgroundData? data)
+        {
+            if (data != null)
+            {
+                installedApplications.Clear();
+                foreach (var installedApplication in data.InstalledApplications)
+                {
+                    if (installedApplication.IconSource != null)
+                    {
+                        //clone the object, co it can be uses in other (UI) thread!!!
+                        installedApplication.IconSource = installedApplication.IconSource.Clone();
+                    }
+                    installedApplications.Add(installedApplication);
+                }
+
+                knownFolders = data.KnownFolders;
+            }
+
+            BackgroundDataRetrieved = true;
+        }
+
+
+
+        /// <summary>
+        /// Pulls the information about available application windows and updates <see cref="ButtonManager"/> window collection.
+        /// </summary>
+        /// <param name="hardRefresh">When the parameter is bool and true, it forces the hard refresh.
+        /// The <see cref="ButtonManager"/>window collection is cleared first and the background data are refreshed on hard refresh.
+        ///  Otherwise just the window collection is updated</param>
         private void RefreshAllWindowsCollection(object? hardRefresh)
         {
-            //UnregisterThumbnail(); - TODO close thumb when not "valid" anymore
+            var isHardRefresh = (hardRefresh is bool b || bool.TryParse(hardRefresh?.ToString(), out b)) && b;
 
-            if ((hardRefresh is bool isHardRefresh || bool.TryParse(hardRefresh?.ToString(), out isHardRefresh)) && isHardRefresh)
+            if (isFirstRun)
             {
-                AllWindows.Clear(); //clear the All windows collection
+                isHardRefresh = true;
+                isFirstRun = false;
             }
-            else
+
+            //begin update of windows collection
+            ButtonManager.BeginUpdate(isHardRefresh);
+
+            if (isHardRefresh)
             {
-                //Mark existing records for removal - when the record is updated the mark is changed, otherwise the record will be removed from collection at the end of processing
-                foreach (var w in AllWindows)
+                //Refresh also init data
+                if (!backgroundInitWorker.IsBusy)
                 {
-                    w.MarkForRemoval();
+                    BackgroundDataRetrieved = false;
+                    backgroundInitWorker.RunWorkerAsync();
                 }
             }
 
             //Retrieve the current foreground window
-            var foregroundWindow = User32.GetForegroundWindow();
+            var foregroundWindow = WndAndApp.GetForegroundWindow();
             if (foregroundWindow != mainWindowHwnd) lastForegroundWindow = foregroundWindow; //"filter out" the main window as being the foreground one to proper handle the toggle
 
             //Enum windows
-            _ = User32.EnumWindows((hwnd, _) =>
-            {
-                //Filter windows - only the top-level application windows except "itself" 
-                var wndStyle = User32.GetWindowLongA(hwnd, GWL_STYLE);
-                if (mainWindowHwnd != hwnd &&
-                    (wndStyle & NATIVE_WINDOW_STYLE_FILTER) == NATIVE_WINDOW_STYLE_FILTER && //appwindow, with border  and visible
-                    (wndStyle & WS_EX_TOOLWINDOW) == 0 &&
-                    (wndStyle & WS_CHILD) == 0)
+            WndAndApp.EnumVisibleWindows(
+                mainWindowHwnd,
+                hwnd => ButtonManager[hwnd],
+                (hwnd, wnd, caption, threadId, processId, ptrProcess) =>
                 {
-                    //Get window title
-                    var sb = new StringBuilder(255);
-                    User32.GetWindowText(hwnd, sb, sb.Capacity);
-                    var text = sb.ToString();
-
-                    if (!string.IsNullOrWhiteSpace(text)) //ignore the windows without the title
+                    //Check whether it's a "new" application window or a one already existing in the ButtonManager
+                    if (wnd == null)
                     {
-                        //Check whether it's a "new" application window or a one already existing in the AllWindows collection
-                        var wnd = AllWindows.FirstOrDefault(w => w.Hwnd == hwnd);
-                        if (wnd == null)
-                        {
-                            //new window
-                            wnd = new WndInfo(hwnd, text);
-                        }
-                        else
-                        {
-                            //existing (known) window
-                            wnd.MarkToKeep();//reset the "remove from collection" flag
-                            wnd.Title = text;//update the title
-                        }
-                        wnd.IsForeground = hwnd == lastForegroundWindow; //check whether the window is foreground window (will be highlighted in UI)
-                        wnd.ThreadHandle = User32.GetWindowThreadProcessId(hwnd, out var process);//get the window thread and process IDs (handles)
-                        wnd.ProcessHandle = process;
-
-                        #region Feature Flag "JumpList" - work in progress
-                        if (Settings.FeatureFlag<bool>("JumpList"))
-                        {
-                            //IDEA - provide the right-click menu containing the jumplist and close 
-                            // TODOs:
-                            //  - get AppUserModelId - explicit from window or explicit from process or ??? 
-                            //  - CRC "hash" the AppUserModelId or exec path(?) to get the jumplist file
-                            //  - parse and process the jumplist file
-                            //  - when will be able to properly get AppUserModelId, it should also be used for grouping of the buttons
-
-
-                            //try to get AppUserModelId from window - seems to work for windows that explicitly define the AppId, 
-                            ShellExtensions.SHGetPropertyStoreForWindow(wnd.Hwnd, out var store);
-                            var appUserModelIdPropKey = new PropertyKey(new Guid(Win32Consts.PKEY_AppUserModel_ID), 5);
-                            uint c = 0;
-                            try
-                            {
-                                store?.GetCount(out c);
-                                if (c != 0)
-                                {
-                                    //try to get AppUserModelId property 
-                                    var appUserModelIdPropVar = new PropVariant();
-                                    store!.GetValue(ref appUserModelIdPropKey, appUserModelIdPropVar);
-                                    var appUserModelId = appUserModelIdPropVar.Value?.ToString();
-
-                                    //enum properties
-                                    var pv = new PropVariant();
-                                    for (uint i = 0; i < c; i++)
-                                    {
-                                        store.GetAt(i, out var propertyKey);
-                                        store.GetValue(ref propertyKey, pv);
-                                    }
-                                }
-                            }
-                            catch
-                            {
-
-                            }
-
-                            //try to get AppUserModelId from process - this doesn't work yet
-                            uint appIdLen = 130;
-                            sb = new StringBuilder((int)appIdLen);
-                            var result = ShellExtensions.GetApplicationUserModelId(process, ref appIdLen, sb);
-                            switch (result)
-                            {
-                                case 0:
-                                    wnd.AppId = sb.ToString();
-                                    break;
-                                case 0x7a: //ERROR_INSUFFICIENT_BUFFER
-                                {
-                                    sb = new StringBuilder((int)appIdLen);
-                                    if (ShellExtensions.GetApplicationUserModelId(process, ref appIdLen, sb) == 0)
-                                    {
-                                        wnd.AppId = sb.ToString();
-                                    }
-
-                                    break;
-                                }
-                            }
-                        }
-                        #endregion
-                        
-                        //Try to retrieve the window icon
-                        IntPtr hiconPtr;
-                        // Use the WM_GETICON message first
-                        var hicon = User32.SendMessageA(hwnd, WM_GETICON, 2, 0);
-
-                        if (hicon == 0)
-                        {
-                            //When the window doesn't provide icon via WM_GETICON, try to get it from native window class
-                            hiconPtr = User32.GetClassLongPtr(hwnd, GCLP_HICONSM);
-                            if (hiconPtr == IntPtr.Zero)
-                            {
-                                hiconPtr = User32.GetClassLongPtr(hwnd, GCLP_HICON);
-                            }
-                        }
-                        else
-                        {
-                            hiconPtr = new IntPtr(hicon); //Native icon handle from WM_GETICON
-                        }
-
-                        //Got the icon?
-                        if (hiconPtr != IntPtr.Zero)
-                        {
-                            //Transform the icon into the bitmap presentable in WPF UI
-                            var bitmapSource = Imaging.CreateBitmapSourceFromHIcon(hiconPtr, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-                            wnd.BitmapSource = bitmapSource;
-                        }
-
-                        //"Sort" window buttons by process
-                        if (wnd.ChangeStatus == WndInfo.ChangeStatusEnum.New) //the process handle should not change, so do it just for new windows
-                        {
-                            var lastFromProcess = AllWindows.LastOrDefault(w => w.ProcessHandle == wnd.ProcessHandle); //any window from the same process already exist in collection?
-                            if (lastFromProcess != null)
-                            {
-                                //there is already a window for the same process
-                                var idx = AllWindows.IndexOf(lastFromProcess);
-                                idx++;
-                                if (idx < AllWindows.Count)
-                                {
-                                    AllWindows.Insert(idx, wnd); //add to existing process sequence
-                                }
-                                else
-                                {
-                                    AllWindows.Add(wnd); //add to end of collection as the windows from the process are the last within the collection
-                                }
-                            }
-                            else
-                            {
-                                AllWindows.Add(wnd); //new process, add to end
-                            }
-
-                        }
-
+                        //app executable 
+                        var executable = WndAndApp.GetProcessExecutable(ptrProcess);
+                        //new window
+                        wnd = new WndInfo(hwnd, caption, threadId, processId, executable);
                     }
-                }
+                    else
+                    {
+                        //existing (known) window
+                        wnd.MarkToKeep(); //reset the "remove from collection" flag
+                        wnd.Title = caption; //update the title
+                    }
 
-                return true;//end of window enum
-            }, 0);
+                    wnd.IsForeground = hwnd == lastForegroundWindow; //check whether the window is foreground window (will be highlighted in UI)
 
-            //Cleanup the collection - remove the windows that were not present in the last enum windows
-            var toRemove = AllWindows.Where(w => w.ChangeStatus == WndInfo.ChangeStatusEnum.ToRemove).ToArray();
-            foreach (var w in toRemove)
-            {
-                AllWindows.Remove(w);
-            }
 
+                    if ((wnd.AppId is null || Settings.CheckForAppIdChange) && BackgroundDataRetrieved) // || isHardRefresh - not needed as wnd will be new with AppId =null
+                    {
+                        string? appUserModelId = null;
+
+                        //try to get AppUserModelId from window - for windows that explicitly define the AppId, 
+                        var store = Shell.GetPropertyStoreForWindow(wnd.Hwnd);
+                        if (store != null)
+                        {
+                            var hr = store.GetCount(out var c);
+                            if (hr.IsSuccess && c > 0)
+                            {
+                                //try to get AppUserModelId property 
+                                appUserModelId = store.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID);
+                                var shellProperties = store.GetProperties();
+                                wnd.ShellProperties = shellProperties;
+                            }
+                        }
+
+                        //Try the app ids from configuration
+                        //It must contain the record for (shell) explorer (done in CTOR) as it will not work properly for explorer windows without this hack
+                        if (appUserModelId == null && wnd.Executable != null &&
+                            (knownAppIds.TryGetValue(wnd.Executable.ToLowerInvariant(), out var appId) ||
+                             knownAppIds.TryGetValue(Path.GetFileName(wnd.Executable.ToLowerInvariant()), out appId)))
+                        {
+                            appUserModelId = appId;
+                        }
+
+
+                        //try to get AppUserModelId from process if not "at window"
+                        appUserModelId ??= WndAndApp.GetProcessApplicationUserModelId(ptrProcess);
+
+                        if (appUserModelId == null && !string.IsNullOrEmpty(wnd.Executable))
+                        {
+                            //try to get from installed app (identified by executable) or use executable as fallback
+                            appUserModelId = installedApplications.GetAppIdFromExecutable(wnd.Executable, out var _);
+                        }
+
+                        wnd.AppId = appUserModelId;
+                    }
+
+
+
+                    if (Settings.CheckForIconChange || isHardRefresh)
+                    {
+                        //Try to retrieve the window icon
+                        wnd.BitmapSource = WndAndApp.GetWindowIcon(hwnd);
+
+                        if (wnd.BitmapSource == null)
+                        {
+                            //try to get icon from installed application
+                            if (!string.IsNullOrEmpty(wnd.AppId))
+                            {
+                                wnd.BitmapSource = installedApplications.GetInstalledApplicationFromAppId(wnd.AppId)?.IconSource;
+                            }
+                        }
+
+                        if (Settings.InvertWhiteIcons)
+                            wnd.BitmapSource = Resource.InvertBitmapIfWhiteOnly(wnd.BitmapSource);
+                    }
+
+                    //Add new window to button manager and the button windows collections
+                    if (wnd.ChangeStatus == WndInfo.ChangeStatusEnum.New)
+                    {
+                        ButtonManager.Add(wnd);
+                    }
+
+                    if (isHardRefresh)
+                    {
+                        LogEnumeratedWindowInfo(wnd.ToString());
+                    }
+
+                }); //enum visible windows
+
+            ButtonManager.EndUpdate();
         }
 
         /// <summary>
@@ -407,46 +509,25 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <param name="hwnd">Native handle (HWND) of the application window</param>
         private void ToggleApplicationWindow(object? hwnd)
         {
-            if (hwnd is not IntPtr hWndIntPtr) return; //invalid command parameter, do nothing
+            if (hwnd is not IntPtr hWndIntPtr || hWndIntPtr == IntPtr.Zero) return; //invalid command parameter, do nothing
 
-            if (hWndIntPtr != IntPtr.Zero)
+            //got the handle, get the window information
+            var wnd = ButtonManager[hWndIntPtr]; // AllWindows.FirstOrDefault(w => w.Hwnd == hWndIntPtr);
+            if (wnd is null) return; //unknown window, do nothing
+
+            if (wnd.IsForeground)
             {
-                //got the handle, get the window information
-                var wnd = AllWindows.FirstOrDefault(w => w.Hwnd == hWndIntPtr);
-                if (wnd is null) return; //unknown window, do nothing
-
-                if (wnd.IsForeground)
-                {
-                    //it's a foreground window - minimize it and return
-                    User32.ShowWindow(hWndIntPtr, SW_MINIMIZE);
-                    LogMinimizeApp(hWndIntPtr, wnd.title);
-                    return;
-                }
-
-                //get the window state
-                var isMinimized = (User32.GetWindowLongA(hWndIntPtr, GWL_STYLE) & WS_MINIMIZE) > 0;
-                var isVisible = User32.IsWindowVisible(hWndIntPtr);
-
-                //make sure the window is shown and activated
-                User32.SetWindowPos(
-                    hWndIntPtr,
-                    HWND_TOP,
-                    0, 0, 0, 0,
-                    SetWindowPosFlags.IgnoreMove |
-                    SetWindowPosFlags.IgnoreResize |
-                    SetWindowPosFlags.ShowWindow |
-                    (isVisible ? SetWindowPosFlags.DoNotActivate : 0));
-
-                //restore the minimized window
-                if (isMinimized) User32.ShowWindow(hWndIntPtr, SW_RESTORE);
-
-                //set the foreground window
-                User32.SetForegroundWindow(hWndIntPtr);
-                LogSwitchApp(hWndIntPtr, wnd.title, isMinimized);
-
-                //refresh the window list
-                RefreshAllWindowsCollection(false);
+                //it's a foreground window - minimize it and return
+                WndAndApp.MinimizeWindow(hWndIntPtr);
+                LogMinimizeApp(hWndIntPtr, wnd.title);
+                return;
             }
+
+            var wasMinimized = WndAndApp.ActivateWindow(hWndIntPtr);
+            LogSwitchApp(hWndIntPtr, wnd.title, wasMinimized);
+
+            //refresh the window list
+            RefreshAllWindowsCollection(false);
         }
 
         /// <summary>
@@ -466,66 +547,12 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 throw new ArgumentException($"Command parameter must be {nameof(ThumbnailPopupCommandParams)}", nameof(param));
             }
 
-            UnregisterThumbnail(); //unregister (hide) existing thumbnail if any
+            HideThumbnail(); //unregister (hide) existing thumbnail if any
+            if (cmdParams.SourceHwnd == IntPtr.Zero) return;
 
-            if (cmdParams.SourceHwnd != IntPtr.Zero)
-            {
-                //Register thumbnail
-                if (DwmApi.DwmRegisterThumbnail(cmdParams.TargetHwnd, cmdParams.SourceHwnd, out thumbnailHandle) == 0 && thumbnailHandle != IntPtr.Zero)
-                {
-                    //Get the size of the thumbnail source window
-                    _ = DwmApi.DwmQueryThumbnailSourceSize(thumbnailHandle, out SIZE size);
+            thumbnailHandle = Thumbnail.ShowThumbnail(cmdParams.SourceHwnd, cmdParams.TargetHwnd, (Rect)cmdParams.TargetRect, out var thumbCentered);
 
-                    //Scale and center the thumbnail within the bounding box
-                    var thumbSize = new Size(size.x, size.y);
-                    var thumbSizeScaled = ScaleToBound(thumbSize, cmdParams.TargetRect.Size);
-                    var thumbCentered = CenterInRectangle(thumbSizeScaled, (Rect)cmdParams.TargetRect);
-
-                    //Provide the visibility, destination rectangle and opacity parameters to the thumbnail to show it
-                    var props = new DWM_THUMBNAIL_PROPERTIES
-                    {
-                        dwFlags = DWM_TNP_VISIBLE | DWM_TNP_RECTDESTINATION | DWM_TNP_OPACITY,
-                        fVisible = true,
-                        rcDestination = (RECT)thumbCentered,
-                        opacity = 255,
-                    };
-                    _ = DwmApi.DwmUpdateThumbnailProperties(thumbnailHandle, ref props);
-
-                    LogShowThumbnail(cmdParams.SourceHwnd, cmdParams.TargetHwnd, (RECT)thumbCentered, thumbnailHandle);
-                }
-            }
-
-        }
-
-        /// <summary>
-        /// Centers given <paramref name="thumbSize"/> within the <paramref name="boundingBox"/>
-        /// </summary>
-        /// <param name="thumbSize"><see cref="Size"/> of the thumbnail</param>
-        /// <param name="boundingBox">Bounding box rectangle</param>
-        /// <returns>Rectangle having the <paramref name="thumbSize"/> that is centered within the <paramref name="boundingBox"/></returns>
-        private static Rect CenterInRectangle(Size thumbSize, Rect boundingBox)
-        {
-
-            var left = boundingBox.Left + (boundingBox.Width - thumbSize.Width) / 2;
-            var top = boundingBox.Top + (boundingBox.Height - thumbSize.Height) / 2;
-
-            return new Rect(left, top, thumbSize.Width, thumbSize.Height);
-        }
-
-        /// <summary>
-        /// Scale given <paramref name="thumbSize"/> into the <paramref name="boundingBox"/> while keeping the aspect ratio
-        /// </summary>
-        /// <param name="thumbSize"><see cref="Size"/> of the thumbnail</param>
-        /// <param name="boundingBox"><see cref="Size"/> of the bounding box</param>
-        /// <returns>Scaled <see cref="Size"/> of the thumbnail</returns>
-        private static Size ScaleToBound(Size thumbSize, Size boundingBox)
-        {
-            if (thumbSize.Width == 0 || thumbSize.Height == 0) return new Size(0, 0);
-            var widthScale = boundingBox.Width / thumbSize.Width;
-            var heightScale = boundingBox.Height / thumbSize.Height;
-
-            var scale = Math.Min(widthScale, heightScale);
-            return new Size(thumbSize.Width * scale, thumbSize.Height * scale);
+            LogShowThumbnail(cmdParams.SourceHwnd, cmdParams.TargetHwnd, thumbCentered, thumbnailHandle);
         }
 
         /// <summary>
@@ -535,14 +562,249 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// When there is no thumbnail (<see cref="MainViewModel.thumbnailHandle"/> is <see cref="IntPtr.Zero"/>),
         /// no exception is thrown and the method "silently" returns
         /// </remarks>
-        private void UnregisterThumbnail()
+        private void HideThumbnail()
         {
-            if (thumbnailHandle != IntPtr.Zero)
+            if (thumbnailHandle == IntPtr.Zero) return;
+
+            Thumbnail.HideThumbnail(thumbnailHandle);
+            LogHideThumbnail(thumbnailHandle);
+            thumbnailHandle = IntPtr.Zero;
+        }
+
+        /// <summary>
+        /// Builds the context menu for application window button
+        /// Parameter <paramref name="param"/> must be <see cref="BuildContextMenuCommandParams"/> object
+        /// </summary>
+        /// <param name="param"><see cref="BuildContextMenuCommandParams"/> object with reference to <see cref="AppWindowButton"/> and <see cref="WndInfo"/></param>
+        /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="BuildContextMenuCommandParams"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
+        private void BuildContextMenu(object? param)
+        {
+            if (param is not BuildContextMenuCommandParams cmdParams)
             {
-                _ = DwmApi.DwmUnregisterThumbnail(thumbnailHandle);
-                LogHideThumbnail(thumbnailHandle);
-                thumbnailHandle = IntPtr.Zero;
+                LogWrongCommandParameter(nameof(BuildContextMenuCommandParams));
+                throw new ArgumentException($"Command parameter must be {nameof(BuildContextMenuCommandParams)}", nameof(param));
             }
+
+            MenuItem menuItem;
+            var menu = new ContextMenu();
+
+            string? appName = null;
+            var wnd = cmdParams.WindowInfo;
+            var appId = wnd.AppId;
+
+            if (appId != null)
+            {
+                appName = installedApplications.GetInstalledApplicationFromAppId(appId)?.Name;
+
+                //appId can be an executable full path, ensure that known folders are transformed to their GUIDs
+                foreach (var knownFolder in knownFolders)
+                {
+                    if (appId == knownFolder.String)
+                    {
+                        appId = knownFolder.GuidStr;
+                        break;
+                    }
+
+                    // ReSharper disable once InvertIf
+                    if (appId.StartsWith(knownFolder.String))
+                    {
+                        appId = knownFolder.GuidStr + appId[knownFolder.String.Length..];
+                        break;
+                    }
+                }
+
+                appName ??= installedApplications.GetInstalledApplicationFromAppId(appId)?.Name; //try again with transformed appId if needed
+
+                //JumpList into the context menu
+                var jumplistItems = jumpListService.GetJumpListItems(appId, installedApplications);
+                if (jumplistItems.Length > 0)
+                {
+                    string? lastCategory = null;
+
+                    foreach (var linkInfo in jumplistItems.Where(l => l.HasTarget)) //skip separators for UI simplicity
+                    {
+                        if (linkInfo.Category != lastCategory)
+                        {
+                            //category title
+                            menuItem = new MenuItem
+                            {
+                                Header = linkInfo.Category,
+                                IsEnabled = false
+                            };
+                            menu.Items.Add(menuItem);
+
+                            lastCategory = linkInfo.Category;
+                        }
+
+                        //jumplist item
+                        menuItem = new MenuItem
+                        {
+                            Header = linkInfo.Name
+                        };
+                        if (linkInfo.Icon != null)
+                        {
+                            menuItem.Icon = new Image
+                            {
+                                Source = Settings.InvertWhiteIcons
+                                    ? Resource.InvertBitmapIfWhiteOnly(linkInfo.Icon)
+                                    : linkInfo.Icon
+                            };
+                        }
+                        else
+                        {
+                            //use app icon
+                            menuItem.Icon = new Image
+                            {
+                                Source = Settings.InvertWhiteIcons
+                                    ? Resource.InvertBitmapIfWhiteOnly(wnd.BitmapSource)
+                                    : wnd.BitmapSource
+                            };
+                        }
+
+                        menuItem.Click += (_, _) =>
+                        {
+                            try
+                            {
+                                if (!linkInfo.IsStoreApp)
+                                {
+                                    Process.Start(new ProcessStartInfo(linkInfo.TargetPath!)
+                                    {
+                                        Arguments = linkInfo.Arguments,
+                                        WorkingDirectory = linkInfo.WorkingDirectory,
+                                        UseShellExecute = true
+                                    });
+                                }
+                                else
+                                {
+                                    Package.ActivateApplication(linkInfo.TargetPath, linkInfo.Arguments, out _);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                LogCantStartApp(linkInfo.ToString(), ex);
+                            }
+
+                        };
+                        menu.Items.Add(menuItem);
+                    }
+                    menu.Items.Add(new Separator());
+                }
+            }
+
+            //Start new instance menu item
+            if (File.Exists(wnd.Executable))
+            {
+                appName ??= installedApplications.GetInstalledApplicationFromExecutable(wnd.Executable)?.Name ??
+                            FileVersionInfo.GetVersionInfo(wnd.Executable).FileDescription ??
+                            Path.GetFileName(wnd.Executable);
+
+                menuItem = new MenuItem
+                {
+                    Header = appName,
+                    Icon = new Image { Source = Settings.InvertWhiteIcons ? Resource.InvertBitmapIfWhiteOnly(wnd.BitmapSource) : wnd.BitmapSource }
+                };
+                menuItem.Click += (_, _) =>
+                {
+                    if (wnd.Executable.ToLowerInvariant().EndsWith("\\explorer.exe"))
+                    {
+                        //explorer and the "special" folders like control panel
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo("explorer")
+                            {
+                                Arguments = wnd.AppId != null ? $"shell:appsFolder\\{wnd.AppId}" : null,
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            LogCantStartApp(appName, ex);
+                        }
+                    }
+                    else
+                    {
+                        var started = false;
+                        if (!wnd.Executable.ToLowerInvariant().EndsWith("\\applicationframehost.exe"))
+                        {
+                            try
+                            {
+                                Process.Start(wnd.Executable);
+                                started = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                LogCantStartApp(appName, ex);
+                            }
+                        }
+
+                        if (started || wnd.AppId == null) return;
+
+                        //maybe store/UWP app
+                        try
+                        {
+                            Package.ActivateApplication(wnd.AppId, null, out _);
+                        }
+                        catch (Exception ex)
+                        {
+                            LogCantStartApp(appName, ex);
+                        }
+                    }
+                };
+                menu.Items.Add(menuItem);
+            }
+
+            //close window menu item
+            menuItem = new MenuItem
+            {
+                Header = "Close window",
+                Icon = new PackIconBootstrapIcons
+                {
+                    Kind = PackIconBootstrapIconsKind.X,
+                    Foreground = Brushes.Red
+                }
+            };
+            menuItem.Click += (_, _) =>
+            {
+                WndAndApp.CloseWindow(wnd.Hwnd);
+            };
+            menu.Items.Add(menuItem);
+
+            menu.Items.Add(new Separator());
+
+            //close menu (cancel) menu item
+            menuItem = new MenuItem
+            {
+                Header = "Cancel",
+                Icon = new PackIconBootstrapIcons
+                {
+                    Kind = PackIconBootstrapIconsKind.Eject,
+                }
+            };
+            menuItem.Click += (_, _) =>
+            {
+                //do nothing, just close the context menu
+            };
+            menu.Items.Add(menuItem);
+
+            cmdParams.Button.ContextMenu = menu;
+        }
+
+        /// <summary>
+        /// Toggles Run On Windows startup option.
+        /// When it's being set, the AppSwitcherBar link is created in Windows startup folder
+        /// When it's being re-set, the AppSwitcherBar link is removed from Windows startup folder
+        /// </summary>
+        private void ToggleRunOnWinStartup()
+        {
+            if (startupService.HasAppStartupLink())
+            {
+                startupService.RemoveAppStartupLink();
+            }
+            else
+            {
+                startupService.CreateAppStartupLink("AppSwitcherBar application");
+            }
+
+            RunOnWinStartupSet = startupService.HasAppStartupLink();
         }
 
         /// <summary>
@@ -554,6 +816,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// Raise <see cref="PropertyChanged"/> event for given <paramref name="propertyName"/>
         /// </summary>
         /// <param name="propertyName">Name of the property changed</param>
+        // ReSharper disable once UnusedMember.Global
         public void OnPropertyChanged([CallerMemberName] string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

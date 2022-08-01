@@ -10,8 +10,8 @@ namespace net.adamec.ui.AppSwitcherBar
     /// </summary>
     public partial class MainWindow
     {
-       
-        public MainWindow(IOptions<AppSettings> options, ILogger<MainWindow> logger):base(options,logger)
+
+        public MainWindow(IOptions<AppSettings> options, ILogger<MainWindow> logger) : base(options, logger)
         {
             InitializeComponent();
 
@@ -21,6 +21,5 @@ namespace net.adamec.ui.AppSwitcherBar
                 Loaded += (_, _) => viewModel.Init(Hwnd);
             }
         }
-
     }
 }

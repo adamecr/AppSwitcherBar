@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "net.adamec.ui.AppSwitcherBar": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    },
+    "Native Debug": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

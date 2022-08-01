@@ -10,9 +10,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using net.adamec.ui.AppSwitcherBar.Config;
 using net.adamec.ui.AppSwitcherBar.Dto;
-using net.adamec.ui.AppSwitcherBar.Win32;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
+using net.adamec.ui.AppSwitcherBar.Win32.Services;
 using net.adamec.ui.AppSwitcherBar.Wpf;
-using static net.adamec.ui.AppSwitcherBar.Win32.Win32Consts;
+using static net.adamec.ui.AppSwitcherBar.Win32.NativeConstants.Win32Consts;
+// ReSharper disable CommentTypo
+// ReSharper disable StringLiteralTypo
 
 namespace net.adamec.ui.AppSwitcherBar.AppBar
 {
@@ -63,7 +68,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         {
             get
             {
-                if (appBarMessageId == 0) appBarMessageId = User32.RegisterWindowMessage($"AppBarMessage_{Guid.NewGuid()}");
+                if (appBarMessageId == 0) appBarMessageId = WndAndApp.RegisterWindowMessage($"AppBarMessage_{Guid.NewGuid()}");
                 return appBarMessageId;
             }
         }
@@ -276,7 +281,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             base.OnSourceInitialized(e);
 
             //Get HWND source and HWND of window
-            HwndSource = (HwndSource)PresentationSource.FromVisual(this) ?? throw new InvalidOperationException("Can't get HWND Source"); ;
+            HwndSource = (HwndSource?)PresentationSource.FromVisual(this) ?? throw new InvalidOperationException("Can't get HWND Source"); 
 
             Hwnd = HwndSource.Handle;
 
@@ -333,10 +338,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
 
             if (!ShowInTaskbar)
             {
-                //To prevent the window button from being placed on the taskbar, create the unowned window with the WS_EX_TOOLWINDOW extended style
-                //https://docs.microsoft.com/en-us/windows/win32/shell/taskbar
-                var exstyle = (ulong)User32.GetWindowLongPtr(Hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW;
-                User32.SetWindowLongPtr(Hwnd, GWL_EXSTYLE, unchecked((IntPtr)exstyle));
+               WndAndApp.HideFromTaskbar(Hwnd);
             }
 
             //Register WNDPROC hook
@@ -522,7 +524,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         private MonitorInfo GetSelectedMonitor()
         {
             var monitor = Monitor;
-            var allMonitors = MonitorInfo.GetAllMonitors().ToArray();
+            var allMonitors = Win32.Services.Monitor.GetAllMonitors();
             if (monitor is null || !allMonitors.Contains(monitor))
             {
                 //if none is selected or is unknown, return the primary monitor

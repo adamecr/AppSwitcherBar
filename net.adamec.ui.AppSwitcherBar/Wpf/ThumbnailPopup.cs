@@ -4,7 +4,9 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using net.adamec.ui.AppSwitcherBar.Win32;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
+// ReSharper disable IdentifierTypo
+// ReSharper disable CommentTypo
 
 namespace net.adamec.ui.AppSwitcherBar.Wpf
 {
@@ -103,7 +105,7 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
         private IntPtr GetPopupHwnd()
         {
             var popupContent = Child; //Accessor to the popup content visual tree
-            var source = (HwndSource)PresentationSource.FromVisual(popupContent); //get the HWND source of dedicated popup window
+            var source = (HwndSource?)PresentationSource.FromVisual(popupContent); //get the HWND source of dedicated popup window
             var handle = source?.Handle ?? IntPtr.Zero; //get the HWND
             return handle;
         }

@@ -10,14 +10,28 @@
     xmlns:wpf="clr-namespace:net.adamec.ui.AppSwitcherBar.Wpf"
     mc:Ignorable="d"
     x:Name="Root"
-    Title="MainWindow">
+    Title="MainWindow" Icon="/AppSwitcherBar.ico">
     <appBar:AppBarWindow.Resources>
         <viewModel:ViewModelLocator x:Key="ViewModelLocator" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </appBar:AppBarWindow.Resources>
     <appBar:AppBarWindow.DataContext>
         <Binding Source="{StaticResource ViewModelLocator}" Path="MainViewModel" />
     </appBar:AppBarWindow.DataContext>
+   
     <DockPanel >
+        <DockPanel.Style>
+            <Style TargetType="{x:Type DockPanel}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Path=BackgroundDataRetrieved}" Value="True">
+                        <Setter Property="Cursor" Value="Arrow"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Path=BackgroundDataRetrieved}" Value="False">
+                        <Setter Property="Cursor" Value="ArrowCD"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </DockPanel.Style>
         <Thumb Background="Gray" DragCompleted="ResizeDragCompleted" DragDelta="ResizeDragDelta" DragStarted="ResizeDragStarted">
             <Thumb.Style>
                 <Style TargetType="{x:Type Thumb}">
@@ -105,16 +119,24 @@
             </WrapPanel.Style>
             <StackPanel Orientation="Horizontal" Margin="1" >
                 <iconPacks:PackIconBootstrapIcons Kind="LayoutSidebarInset" Margin="1" VerticalAlignment="Center" />
-                <ComboBox ItemsSource="{Binding Edges}" SelectedItem="{Binding Path=DockMode, ElementName=Root, Mode=TwoWay}" Margin="1" VerticalAlignment="Center" Width="100"  />
+                <ComboBox ItemsSource="{Binding Edges}" SelectedItem="{Binding Path=DockMode, ElementName=Root, Mode=TwoWay}" Margin="1" VerticalAlignment="Center" Width="120"  />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="1" >
                 <iconPacks:PackIconBootstrapIcons Kind="Display" Margin="1" VerticalAlignment="Center" />
-                <ComboBox ItemsSource="{Binding AllMonitors}" SelectedItem="{Binding Path=Monitor, ElementName=Root, Mode=TwoWay}" Margin="1" VerticalAlignment="Center" Width="100"  />
+                <ComboBox ItemsSource="{Binding AllMonitors}" SelectedItem="{Binding Path=Monitor, ElementName=Root, Mode=TwoWay}" Margin="1" VerticalAlignment="Center" Width="120"  />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Margin="1" >
                 <iconPacks:PackIconBootstrapIcons Kind="CardList" Margin="1" VerticalAlignment="Center" />
-                <Button Content="Refresh" Command="{Binding RefreshWindowCollectionCommand}"  CommandParameter="true" Margin="1" Width="100"/>
+                <Button Content="Refresh" Command="{Binding RefreshWindowCollectionCommand}"  CommandParameter="true" Margin="1" Width="120"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="1" >
+                <CheckBox  Content="Run on Win start" Margin="1" VerticalAlignment="Center" Width="120"
+                           Command="{Binding ToggleRunOnStartupCommand}"
+                           IsChecked="{Binding RunOnWinStartupSet}"
+                           Visibility="{Binding RunOnWinStartupAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                           />
             </StackPanel>
 
         </WrapPanel>
@@ -139,7 +161,8 @@
                 </Style>
             </WrapPanel.Style>
 
-            <ItemsControl Margin="5" ItemsSource="{Binding AllWindows}">
+
+            <ItemsControl Margin="5" ItemsSource="{Binding ButtonManager}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel/>
@@ -147,15 +170,17 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate  >
-                        <Button Margin="1"
-                                Command="{Binding Path=DataContext.ToggleApplicationWindowCommand, ElementName=Root}" CommandParameter="{Binding Path=Hwnd}"
-                                ToolTip="{Binding Path=Title}" 
-                                Width="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
-                                MaxWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}" 
-                                MinWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
-                                VerticalContentAlignment="Center" HorizontalContentAlignment="Left" x:Name="WndButton">
-                            <Button.Style>
-                                <Style TargetType="{x:Type Button}">
+                        <wpf:AppWindowButton Margin="1"
+                                             WindowInfo="{Binding}"
+                                             Command="{Binding DataContext.ToggleApplicationWindowCommand, ElementName=Root}" CommandParameter="{Binding Path=Hwnd}"
+                                             BuildContextMenuCommand="{Binding DataContext.BuildContextMenuCommand, ElementName=Root}"
+                                             ToolTip="{Binding Path=Title}" 
+                                             Width="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
+                                             MaxWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}" 
+                                             MinWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
+                                             VerticalContentAlignment="Center" HorizontalContentAlignment="Left" x:Name="WndButton">
+                            <wpf:AppWindowButton.Style>
+                                <Style TargetType="{x:Type wpf:AppWindowButton}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Path=IsForeground}" Value="True">
                                             <Setter Property="FontWeight" Value="Bold" />
@@ -165,7 +190,12 @@
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </Button.Style>
+                            </wpf:AppWindowButton.Style>
+                            <wpf:AppWindowButton.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem>Initial menu; this will be replaced ...</MenuItem>
+                                </ContextMenu>
+                            </wpf:AppWindowButton.ContextMenu>
                             <Grid Margin="2">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="30" />
@@ -188,7 +218,7 @@
                                     </Border>
                                 </wpf:ThumbnailPopup>
                             </Grid>
-                        </Button>
+                        </wpf:AppWindowButton>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

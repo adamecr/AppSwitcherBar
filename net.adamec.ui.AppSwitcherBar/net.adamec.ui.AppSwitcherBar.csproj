@@ -1,29 +1,45 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseWPF>true</UseWPF>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Copyright>Radek Adamec 2022</Copyright>
-    <RepositoryUrl>https://github.com/adamecr/AppSwitcherBar</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/adamecr/AppSwitcherBar</PackageProjectUrl>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<Authors>Radek Adamec</Authors>
+		<Copyright>Radek Adamec 2022</Copyright>
+		<RepositoryUrl>https://github.com/adamecr/AppSwitcherBar</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/adamecr/AppSwitcherBar</PackageProjectUrl>
+		<Product>AppSwitcherBar</Product>
+		<Version>1.1.0</Version>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<FileVersion>1.1.0</FileVersion>
+		<ApplicationIcon>AppSwitcherBar.ico</ApplicationIcon>
+		<AssemblyName>AppSwitcherBar</AssemblyName>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="appsettings.json" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Remove="appsettings.json" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="AppSwitcherBar.ico">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MahApps.Metro.IconPacks.BootstrapIcons" Version="4.11.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="MahApps.Metro.IconPacks.BootstrapIcons" Version="4.11.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="AppSwitcherBar.png">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
 
 </Project>

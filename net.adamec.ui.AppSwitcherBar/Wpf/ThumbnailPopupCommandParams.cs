@@ -1,5 +1,5 @@
 ﻿using System;
-using net.adamec.ui.AppSwitcherBar.Win32;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
 
 namespace net.adamec.ui.AppSwitcherBar.Wpf
 {

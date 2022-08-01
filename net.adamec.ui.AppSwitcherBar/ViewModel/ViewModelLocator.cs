@@ -3,6 +3,8 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using net.adamec.ui.AppSwitcherBar.Config;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Startup;
 
 namespace net.adamec.ui.AppSwitcherBar.ViewModel
 {
@@ -23,12 +25,20 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// Dummy logger used in designer mode
         /// </summary>
         private readonly ILogger designTimeLogger;
-        
+
+        /// <summary>
+        /// Default AppSettings used in designer mode
+        /// </summary>
+        private readonly AppSettings designTimeAppSettings;
+
         /// <summary>
         /// CTOR
         /// </summary>
         public ViewModelLocator()
         {
+            //create default AppSettings
+            designTimeAppSettings = new AppSettings();
+
             //create the (dummy) design time logger
             using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.SetMinimumLevel(LogLevel.Trace).AddDebug().AddConsole());
             designTimeLogger = loggerFactory.CreateLogger("DesignTime");
@@ -40,7 +50,13 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// When running in design time a new instance of <see cref="MainViewModel"/> with default <see cref="AppSettings"/> and dummy logger is used
         /// </summary>
         /// <remarks>No need to mock whole model/class for design time, just use the default settings and design time logger</remarks>
-        public MainViewModel MainViewModel => IsDesignTime ? new MainViewModel(new AppSettings(), designTimeLogger) : App.ServiceProvider.GetRequiredService<MainViewModel>();
+        public MainViewModel MainViewModel => IsDesignTime ?
+                new MainViewModel(
+                    designTimeAppSettings,
+                    designTimeLogger,
+                    new DummyJumpListService(),
+                    new DummyStartupService()) :
+                App.ServiceProvider.GetRequiredService<MainViewModel>();
     }
 }
 

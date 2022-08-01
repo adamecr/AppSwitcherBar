@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media.Imaging;
+// ReSharper disable InvertIf
 
 namespace net.adamec.ui.AppSwitcherBar.Dto
 {
@@ -14,6 +15,22 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Window handle
         /// </summary>
         public IntPtr Hwnd { get; }
+        /// <summary>
+        /// Window's thread ID
+        /// </summary>
+        public uint ThreadId { get; }
+
+        /// <summary>
+        /// Window's process ID
+        /// </summary>
+        public uint ProcessId { get; }
+
+        /// <summary>
+        /// Application executable
+        /// </summary>
+        public string? Executable { get; }
+
+
 
         /// <summary>
         /// Window title
@@ -76,40 +93,21 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         }
 
         /// <summary>
-        /// Window's thread ID (handle)
+        /// Some of the shell properties
         /// </summary>
-        private IntPtr threadHandle = IntPtr.Zero;
-        /// <summary>
-        /// Window's thread ID (handle)
-        /// </summary>
-        public IntPtr ThreadHandle
-        {
-            get => threadHandle;
-            set
-            {
-                if (threadHandle != value)
-                {
-                    threadHandle = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
+        private Properties shellProperties = new();
 
         /// <summary>
-        /// Window's process ID (handle)
+        /// Some of the shell properties
         /// </summary>
-        private IntPtr processHandle = IntPtr.Zero;
-        /// <summary>
-        /// Window's process ID (handle)
-        /// </summary>
-        public IntPtr ProcessHandle
+        public Properties ShellProperties
         {
-            get => processHandle;
+            get => shellProperties;
             set
             {
-                if (processHandle != value)
+                if (shellProperties != value)
                 {
-                    processHandle = value;
+                    shellProperties = value;
                     OnPropertyChanged();
                 }
             }
@@ -135,21 +133,38 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
             }
         }
 
+
         /// <summary>
         /// Change status used when (re)evaluating the windows
         /// </summary>
         public ChangeStatusEnum ChangeStatus { get; private set; }
 
         /// <summary>
+        /// Identifier of the "group" the window belongs to.
+        /// It's used for grouping the window buttons of the same application together
+        /// Priority: <see cref="AppId"/>, <see cref="Executable"/>, <see cref="ProcessId"/>
+        /// </summary>
+        public string Group =>
+            !string.IsNullOrEmpty(AppId) ? AppId : //includes the "Executable option" as the Executable is the fallback source for AppId whenever the AppId is set
+            !string.IsNullOrEmpty(Executable) ? Executable : //when AppId is not set yet and executable is set
+            ProcessId.ToString(); //process ID is used as a fallback when neither AppId not Executable is known or not set yet
+
+        /// <summary>
         /// CTOR
         /// </summary>
         /// <param name="hWnd">Window handle</param>
         /// <param name="title">Window title</param>
-        public WndInfo(IntPtr hWnd, string title)
+        /// <param name="threadId">Window's thread ID</param>
+        /// <param name="processId">Window's process ID</param>
+        /// <param name="executable">Application executable</param>
+        public WndInfo(IntPtr hWnd, string title, uint threadId, uint processId, string? executable)
         {
             ChangeStatus = ChangeStatusEnum.New;
             this.title = title;
             Hwnd = hWnd;
+            ThreadId = threadId;
+            ProcessId = processId;
+            Executable = executable;
         }
 
         /// <summary>
@@ -190,7 +205,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <returns>String representation of the object</returns>
         public override string ToString()
         {
-            return $"{Title} ({Hwnd}) T:{ThreadHandle}, P:{ProcessHandle}";
+            return $"{Title} ({Hwnd}) T:{ThreadId}, P:{ProcessId}, A:{AppId}, E:{Executable}";
         }
 
         /// <summary>

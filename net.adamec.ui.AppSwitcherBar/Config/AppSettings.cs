@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using net.adamec.ui.AppSwitcherBar.AppBar;
+// ReSharper disable IdentifierTypo
+// ReSharper disable CommentTypo
 
 namespace net.adamec.ui.AppSwitcherBar.Config
 {
@@ -56,9 +58,19 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         public int RefreshWindowInfosIntervalMs { get; set; } = 200;
 
         /// <summary>
+        /// Flag whether to check for window icon change during refresh or use the one retrieved for the first time (default is true)
+        /// </summary>
+        public bool CheckForIconChange { get; set; } = true;
+
+        /// <summary>
+        /// Flag whether to check for AppId (AUMID) change during refresh or use the one retrieved for the first time (default is false)
+        /// </summary>
+        public bool CheckForAppIdChange { get; set; } = false;
+
+        /// <summary>
         /// Feature flags collection
         /// </summary>
-        public Dictionary<string, string> FeatureFlags { get; set; } = new();
+        public Dictionary<string, string>? FeatureFlags { get; set; } = new();
 
         /// <summary>
         /// Returns the value of feature flag with given <paramref name="featureFlagName"/> or default(T)
@@ -68,7 +80,7 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// <returns>Value of feature flag with given <paramref name="featureFlagName"/> or default(T)</returns>
         public T? FeatureFlag<T>(string featureFlagName)
         {
-            return FeatureFlag<T>(featureFlagName,default);
+            return FeatureFlag<T>(featureFlagName, default);
         }
 
         /// <summary>
@@ -78,9 +90,9 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// <param name="featureFlagName">Name of the feature flag</param>
         /// <param name="defaultValue">Value to be returned when the <paramref name="featureFlagName"/> doesn't exist of can't be converted to <typeparamref name="T"/></param>
         /// <returns>Value of feature flag with given <paramref name="featureFlagName"/> or <paramref name="defaultValue"/></returns>
-        public T? FeatureFlag<T>(string featureFlagName,T? defaultValue)
+        public T? FeatureFlag<T>(string featureFlagName, T? defaultValue)
         {
-            if (FeatureFlags?.TryGetValue(featureFlagName, out var strValue)??false)
+            if (FeatureFlags?.TryGetValue(featureFlagName, out var strValue) ?? false)
             {
                 try
                 {
@@ -93,7 +105,29 @@ namespace net.adamec.ui.AppSwitcherBar.Config
             }
             return defaultValue;
         }
+
+        /// <summary>
+        /// Application IDs collection
+        /// </summary>
+        public Dictionary<string, string>? AppIds { get; set; } = new();
+
+        /// <summary>
+        /// Flag whether the application will invert the white icons (default is true)
+        /// </summary>
+        public bool InvertWhiteIcons { get; set; } = true;
+
+        /// <summary>
+        /// Limits the number of items in single category of JumpList (not applied to Tasks) (default is 10)
+        /// </summary>
+        public int JumpListCategoryLimit { get; set; } = 10;
+
+        /// <summary>
+        /// Flag whether the application will allow user to set/reset AppSwitcherBar to run on Windows startup (default is true)
+        /// </summary>
+        public bool AllowRunOnWindowsStartup { get; set; } = true;
     }
+
+
 
     /// <summary>
     /// Application settings (read only interface)
@@ -150,9 +184,19 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         int RefreshWindowInfosIntervalMs { get; }
 
         /// <summary>
+        /// Flag whether to check for window icon change during refresh or use the one retrieved for the first time
+        /// </summary>
+        bool CheckForIconChange { get; }
+
+        /// <summary>
+        /// Flag whether to check for AppId (AUMID) change during refresh or use the one retrieved for the first time
+        /// </summary>
+        bool CheckForAppIdChange { get; }
+
+        /// <summary>
         /// Feature flags collection
         /// </summary>
-        Dictionary<string, string> FeatureFlags { get; }
+        Dictionary<string, string>? FeatureFlags { get; }
 
         /// <summary>
         /// Returns the value of feature flag with given <paramref name="featureFlagName"/> or default(T)
@@ -170,5 +214,25 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// <param name="defaultValue">Value to be returned when the <paramref name="featureFlagName"/> doesn't exist of can't be converted to <typeparamref name="T"/></param>
         /// <returns>Value of feature flag with given <paramref name="featureFlagName"/> or <paramref name="defaultValue"/></returns>
         T? FeatureFlag<T>(string featureFlagName, T? defaultValue);
+
+        /// <summary>
+        /// Application IDs collection
+        /// </summary>
+        Dictionary<string, string>? AppIds { get; }
+
+        /// <summary>
+        /// Flag whether the application will invert the white icons
+        /// </summary>
+        bool InvertWhiteIcons { get; }
+
+        /// <summary>
+        /// Limits the number of items in single category of JumpList (not applied to Tasks)
+        /// </summary>
+        public int JumpListCategoryLimit { get; }
+
+        /// <summary>
+        /// Flag whether the application will allow user to set/reset AppSwitcherBar to run on Windows startup
+        /// </summary>
+        bool AllowRunOnWindowsStartup { get; }
     }
 }
