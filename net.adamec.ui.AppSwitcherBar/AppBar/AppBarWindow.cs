@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -18,6 +19,7 @@ using net.adamec.ui.AppSwitcherBar.Wpf;
 using static net.adamec.ui.AppSwitcherBar.Win32.NativeConstants.Win32Consts;
 // ReSharper disable CommentTypo
 // ReSharper disable StringLiteralTypo
+// ReSharper disable IdentifierTypo
 
 namespace net.adamec.ui.AppSwitcherBar.AppBar
 {
@@ -29,6 +31,99 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
     /// WPF implementation based on https://github.com/mgaffigan/WpfAppBar</remarks>
     public class AppBarWindow : Window
     {
+        #region Logging
+        // ReSharper disable InconsistentNaming
+        /// <summary>
+        /// Logger
+        /// </summary>
+        protected readonly ILogger logger;
+        // 3xxx - AppBarWindow (39xx Errors/Exceptions)
+        /// <summary>
+        /// Log definition options
+        /// </summary>
+        private static readonly LogDefineOptions LogOptions = new() { SkipEnabledCheck = true };
+
+
+        //----------------------------------------------
+        // 3001 AppBar initialized
+        //----------------------------------------------
+
+        /// <summary>
+        /// Logger message definition for LogAppBarInitialized
+        /// </summary>
+        private static readonly Action<ILogger,  Exception?> __LogAppBarInitializedDefinition =
+
+            LoggerMessage.Define(
+                LogLevel.Information,
+                new EventId(3001, nameof(LogAppBarInitialized)),
+                "AppBar initialized",
+                LogOptions);
+
+        /// <summary>
+        /// Logs record (Information) when the AppBar is initialized
+        /// </summary>
+        private void LogAppBarInitialized()
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                __LogAppBarInitializedDefinition(logger, null);
+            }
+        }
+
+        //----------------------------------------------
+        // 3002 AppBar removed
+        //----------------------------------------------
+
+        /// <summary>
+        /// Logger message definition for LogAppBarRemoved
+        /// </summary>
+        private static readonly Action<ILogger, Exception?> __LogAppBarRemovedDefinition =
+
+            LoggerMessage.Define(
+                LogLevel.Information,
+                new EventId(3003, nameof(LogAppBarRemoved)),
+                "AppBar removed",
+                LogOptions);
+
+        /// <summary>
+        /// Logs record (Information) when the AppBar is removed
+        /// </summary>
+        private void LogAppBarRemoved()
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                __LogAppBarRemovedDefinition(logger, null);
+            }
+        }
+
+        //----------------------------------------------
+        // 3003 User settings saved
+        //----------------------------------------------
+
+        /// <summary>
+        /// Logger message definition for LogUserSettingsSaved
+        /// </summary>
+        private static readonly Action<ILogger, string,Exception?> __LogUserSettingsSavedDefinition =
+
+            LoggerMessage.Define<string>(
+                LogLevel.Debug,
+                new EventId(3003, nameof(LogUserSettingsSaved)),
+                "User settings saved {userSettings}",
+                LogOptions);
+
+        /// <summary>
+        /// Logs record (Debug) when the user settings was saved
+        /// </summary>
+        private void LogUserSettingsSaved()
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                __LogUserSettingsSavedDefinition(logger, Settings.UserSettings.ToString(), null);
+            }
+        }
+        // ReSharper restore InconsistentNaming
+        #endregion
+
         /// <summary>
         /// Original appbar width or height when dragging the thumb to resize
         /// </summary>
@@ -37,6 +132,14 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// Appbar resize delta (width or height) when dragging the thumb to resize
         /// </summary>
         private double ThumbDragDeltaFromOriginal { get; set; }
+        /// <summary>
+        /// Width of measured (main) element used for auto size feature
+        /// </summary>
+        private double sizeMeasureElementWidth;
+        /// <summary>
+        /// Height of measured (main) element used for auto size feature
+        /// </summary>
+        private double sizeMeasureElementHeight;
 
         /// <summary>
         /// Window handle source
@@ -74,21 +177,17 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         }
 
         /// <summary>
-        /// Logger
-        /// </summary>
-        protected readonly ILogger logger;
-        /// <summary>
         /// Flag whether the window is used by XAML Designer 
         /// </summary>
         protected bool IsDesignTime => DesignerProperties.GetIsInDesignMode(this);
         /// <summary>
         /// Flag whether the window (appbar) is docked vertically
         /// </summary>
-        protected bool IsVertical => DockMode == AppBarDockMode.Left || DockMode == AppBarDockMode.Right;
+        protected bool IsVertical => DockMode is AppBarDockMode.Left or AppBarDockMode.Right;
         /// <summary>
         /// Flag whether the window (appbar) is docked horizontally 
         /// </summary>
-        protected bool IsHorizontal => DockMode == AppBarDockMode.Top || DockMode == AppBarDockMode.Bottom;
+        protected bool IsHorizontal => DockMode is AppBarDockMode.Top or AppBarDockMode.Bottom;
 
         /// <summary>
         /// Appbar dock mode
@@ -121,10 +220,28 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// Current monitor (display) information
         /// </summary>
         public static readonly DependencyProperty MonitorProperty = DependencyProperty.Register(
-            "Monitor",
+            nameof(Monitor),
             typeof(MonitorInfo),
             typeof(AppBarWindow),
             new FrameworkPropertyMetadata(null, DockLocationOrSizeChanged));
+
+        /// <summary>
+        /// Flag whether the application bar is auto sized
+        /// </summary>
+        public bool IsAutoSized
+        {
+            get => (bool)GetValue(IsAutoSizedProperty);
+            set => SetValue(IsAutoSizedProperty, value);
+        }
+        /// <summary>
+        /// Flag whether the application bar is auto sized
+        /// </summary>
+        public static readonly DependencyProperty IsAutoSizedProperty = DependencyProperty.Register(
+            nameof(IsAutoSized),
+            typeof(bool),
+            typeof(AppBarWindow),
+            new FrameworkPropertyMetadata(true, DockLocationOrSizeChanged));
+
 
         /// <summary>
         /// App bar width when docked vertically
@@ -138,7 +255,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// App bar width when docked vertically
         /// </summary>
         public static readonly DependencyProperty DockedWidthProperty = DependencyProperty.Register(
-            "DockedWidth",
+            nameof(DockedWidth),
             typeof(int),
             typeof(AppBarWindow),
             new FrameworkPropertyMetadata(200, DockLocationOrSizeChanged, CoerceDockedWidthOrHeight));
@@ -155,7 +272,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// App bar height when docked horizontally
         /// </summary>
         public static readonly DependencyProperty DockedHeightProperty = DependencyProperty.Register(
-            "DockedHeight",
+            nameof(DockedHeight),
             typeof(int),
             typeof(AppBarWindow),
             new FrameworkPropertyMetadata(100, DockLocationOrSizeChanged, CoerceDockedWidthOrHeight));
@@ -172,23 +289,48 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// Application settings
         /// </summary>
         private static readonly DependencyPropertyKey SettingsPropertyKey = DependencyProperty.RegisterReadOnly(
-            "Settings",
+            nameof(Settings),
             typeof(AppSettings),
             typeof(AppBarWindow),
             new FrameworkPropertyMetadata());
 
         /// <summary>
+        /// Attached property to be used by child items to implement the auto size feature
+        /// </summary>
+        public static readonly DependencyProperty BarAutoSizeProperty = DependencyProperty.RegisterAttached(
+            "BarAutoSize",
+            typeof(AppBarAutoSizeElement),
+            typeof(AppBarWindow),
+            new FrameworkPropertyMetadata(defaultValue: AppBarAutoSizeElement.None)
+            );
+
+        /// <summary>
+        ///  Get accessor method to <see cref="BarAutoSizeProperty"/>
+        /// </summary>
+        /// <param name="target"><see cref="UIElement"/> to get the <see cref="BarAutoSizeProperty"/> value from</param>
+        /// <returns>Value of <see cref="BarAutoSizeProperty"/> for given <paramref name="target"/></returns>
+        public static AppBarAutoSizeElement GetBarAutoSize(UIElement target) => (AppBarAutoSizeElement)target.GetValue(BarAutoSizeProperty);
+
+        /// <summary>
+        /// Set accessor method to <see cref="BarAutoSizeProperty"/>
+        /// </summary>
+        /// <param name="target"><see cref="UIElement"/> to set the <see cref="BarAutoSizeProperty"/> value to</param>
+        /// <param name="value">Value of <see cref="BarAutoSizeProperty"/> for given <paramref name="target"/></param>
+        public static void SetBarAutoSize(UIElement target, AppBarAutoSizeElement value) => target.SetValue(BarAutoSizeProperty, value);
+
+        /// <summary>
         /// CTOR - used by XAML designer
         /// </summary>
         /// <remarks>HACK: must be public, so Name property can be used in XAML</remarks>
+        // ReSharper disable once UnusedMember.Global
         public AppBarWindow()
         {
             //create dummy logger
             var factory = LoggerFactory.Create(b => b.AddConsole());
             logger = factory.CreateLogger<AppBarWindow>();
 
-            //use default settings
-            Settings = new AppSettings();
+            //use design time settings
+            Settings = AppSettings.DesignTimeAppSettings;
         }
         /// <summary>
         /// CTOR
@@ -206,6 +348,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
 
             ShowInTaskbar = Settings.ShowInTaskbar;
             DockMode = Settings.AppBarDock;
+            IsAutoSized = Settings.AppBarAutoSize;
             DockedWidth = Settings.AppBarDockedWidth;
             DockedHeight = Settings.AppBarDockedHeight;
 
@@ -270,7 +413,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         }
         #endregion
 
-        #region window events
+        #region Window events
         /// <summary>
         /// Raises <see cref="Window.SourceInitialized"/> event when the underlying Win32 window handle becomes available
         /// </summary>
@@ -281,7 +424,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             base.OnSourceInitialized(e);
 
             //Get HWND source and HWND of window
-            HwndSource = (HwndSource?)PresentationSource.FromVisual(this) ?? throw new InvalidOperationException("Can't get HWND Source"); 
+            HwndSource = (HwndSource?)PresentationSource.FromVisual(this) ?? throw new InvalidOperationException("Can't get HWND Source");
 
             Hwnd = HwndSource.Handle;
 
@@ -326,7 +469,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         }
         #endregion
 
-        #region appbar management
+        #region Appbar management
         /// <summary>
         /// Initialize appbar
         /// </summary>
@@ -338,7 +481,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
 
             if (!ShowInTaskbar)
             {
-               WndAndApp.HideFromTaskbar(Hwnd);
+                WndAndApp.HideFromTaskbar(Hwnd);
             }
 
             //Register WNDPROC hook
@@ -350,6 +493,8 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
 
             //Set the initial location and size
             AppBarUpdate();
+
+            LogAppBarInitialized();
         }
 
         /// <summary>
@@ -362,6 +507,12 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             {
                 return; //prevent the infinite event loop
             }
+
+            Settings.UserSettings.AppBarDock = DockMode;
+            Settings.UserSettings.AppBarDockedWidth = DockedWidth;
+            Settings.UserSettings.AppBarDockedHeight = DockedHeight;
+            Settings.UserSettings.AppBarAutoSize = IsAutoSized;
+            if(Settings.UserSettings.Save()) LogUserSettingsSaved();
 
             //To set the size and position of an appbar, an application first proposes a screen edge and bounding rectangle for the appbar by sending the ABM_QUERYPOS message.
             //The system determines whether any part of the screen area within the proposed rectangle is occupied by the taskbar or another appbar,
@@ -415,11 +566,11 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// </summary>
         private void AppBarRemove()
         {
-            if (IsAppBarRegistered)
-            {
-                SendAppBarMessage(ABMsg.REMOVE);
-                IsAppBarRegistered = false;
-            }
+            if (!IsAppBarRegistered) return;
+            
+            SendAppBarMessage(ABMsg.REMOVE);
+            IsAppBarRegistered = false;
+            LogAppBarRemoved();
         }
 
         /// <summary>
@@ -456,6 +607,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             else if (msg == AppBarMessageId)
             {
                 //Notfications from appbar system
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
                 switch ((ABNotify)(int)wParam)
                 {
                     //An application should set the size and position of its appbar after registering it and whenever the appbar receives the ABN_POSCHANGED notification message.
@@ -464,6 +616,20 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
                     case ABNotify.POSCHANGED:
                         AppBarUpdate();
                         handled = true;
+                        break;
+
+                    // A full-screen application has started, or the last full-screen
+                    // application has closed. Set the appbar's z-order appropriately.
+                    case ABNotify.FULLSCREENAPP:
+
+                        if ((int)lParam > 0)
+                        {
+                            WndAndApp.SetWindowToBottom(hwnd);
+                        }
+                        else
+                        {
+                            WndAndApp.SetWindowToTop(hwnd);
+                        }
                         break;
                 }
             }
@@ -476,6 +642,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// Sends an appbar <paramref name="message"/> to the system.
         /// </summary>
         /// <param name="message">Appbar message value to send. This parameter can be one of the values from <see cref="ABMsg"/>.</param>
+        /// <returns>This function returns a message-dependent value</returns>
         private void SendAppBarMessage(ABMsg message)
         {
             SendAppBarMessage(message, null, out _);
@@ -535,7 +702,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         }
         #endregion
 
-        #region resize thumb drag and drop
+        #region Resize thumb drag and drop
         /// <summary>
         /// Thumb drag started event handled
         /// </summary>
@@ -611,28 +778,140 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             }
         }
         #endregion
-    }
 
-    /// <summary>
-    /// AppBar dock mode
-    /// </summary>
-    public enum AppBarDockMode
-    {
+        #region AutoSize
+
         /// <summary>
-        /// Docked to left edge of screen
+        /// Configure the auto size functionality (identify the related UI element and do initial auto size if enabled)
         /// </summary>
-        Left = 0,
+        /// <param name="e">Event arguments</param>
+        protected override void OnContentRendered(EventArgs e)
+        {
+            base.OnContentRendered(e);
+
+            var sizeAddElements = new List<FrameworkElement>();
+            GetAutoSizeUiElements(this, sizeAddElements, out var sizeMeasureElement);
+            if (sizeMeasureElement == null) return;
+
+            DoAutoSize(sizeMeasureElement, sizeAddElements);
+            sizeMeasureElement.SizeChanged += (_, _) => DoAutoSize(sizeMeasureElement, sizeAddElements);
+        }
+
+
         /// <summary>
-        /// Docked to top edge of screen
+        /// Auto size the <see cref="AppBarWindow"/> based on the content (size) of <paramref name="sizeMeasureElement"/>.
+        /// Takes into the consideration the margins of parent elements ("containers") and adds the size of elements defined in <paramref name="sizeAddElements"/> collection
         /// </summary>
-        Top = 1,
+        /// <param name="sizeMeasureElement">Element used as a base for auto size</param>
+        /// <param name="sizeAddElements">Elements to "add" to calculated size</param>
+        private void DoAutoSize(FrameworkElement sizeMeasureElement, IEnumerable<FrameworkElement> sizeAddElements)
+        {
+            if (!IsAutoSized) return; //auto size is not enables
+
+            //check whether the size of measured element "significantly" changed
+            const int sizeBuffer = 2;
+            const double sensitivity = (double)sizeBuffer / 2;
+
+            var width = sizeMeasureElement.RenderSize.Width;
+            var height = sizeMeasureElement.RenderSize.Height;
+            var isDirty = false;
+            if (Math.Abs(width - sizeMeasureElementWidth) >= sensitivity)
+            {
+                isDirty = true;
+                sizeMeasureElementWidth = width;
+            }
+
+            if (Math.Abs(height - sizeMeasureElementHeight) >= sensitivity)
+            {
+                isDirty = true;
+                sizeMeasureElementHeight = height;
+            }
+
+            if (!isDirty) return; //no size change
+
+            //calculate the target size
+            // - size of measured element + margins of "containers" up to the visual tree + sum of sizes of "side/sibling" elements marked with "Add" property
+            var targetSize = (int)(IsVertical ?
+                sizeMeasureElementWidth + GetMargins(sizeMeasureElement, element => element.Margin.Left + element.Margin.Right) + sizeAddElements.Sum(element => element.ActualWidth) :
+                sizeMeasureElementHeight + GetMargins(sizeMeasureElement, element => element.Margin.Top + element.Margin.Bottom) + sizeAddElements.Sum(element => element.ActualHeight));
+
+            //check whether the target size change is bigger than "size buffer" used to absorb small changes
+            //apply a new size when needed
+            if (IsVertical)
+            {
+                if (Math.Abs(DockedWidth - targetSize) >= sizeBuffer)
+                {
+                    DockedWidth = targetSize + sizeBuffer;
+                }
+            }
+            else
+            {
+                if (Math.Abs(DockedHeight - targetSize) >= sizeBuffer)
+                {
+                    DockedHeight = targetSize + sizeBuffer;
+                }
+            }
+        }
+
         /// <summary>
-        /// Docked to right edge of screen
+        /// Iterates from <paramref name="element"/> up to the window and gets the sum of margins (measured using <paramref name="measure"/> function)
         /// </summary>
-        Right = 2,
+        /// <param name="element">Element to check</param>
+        /// <param name="measure">Function used to measure margins.</param>
+        /// <returns>Sum of margins from <paramref name="element"/> to window</returns>
+        private double GetMargins(Visual element, Func<FrameworkElement, double> measure)
+        {
+            var margins = 0.0d;
+
+            if (element is FrameworkElement frameworkElement) margins += measure(frameworkElement);
+            var parent = VisualTreeHelper.GetParent(element) as Visual;
+            if (parent != this && parent != null)
+            {
+                margins += GetMargins(parent, measure);
+            }
+            return margins;
+        }
+
         /// <summary>
-        /// Docked to bottom edge of screen
+        /// Iterates through the visual tree to find a child with <see cref="BarAutoSizeProperty"/> set to <see cref="AppBarAutoSizeElement.Measure"/> and returns it in <paramref name="sizeMeasureElement"/>.
+        /// Also checks for children having <see cref="BarAutoSizeProperty"/> set to <see cref="AppBarAutoSizeElement.Add"/> and returns them in <paramref name="sizeAddElements"/>
         /// </summary>
-        Bottom = 3
+        /// <param name="parent">Element to process</param>
+        /// <param name="sizeAddElements">Collection of the elements having <see cref="BarAutoSizeProperty"/> set to <see cref="AppBarAutoSizeElement.Add"/></param>
+        /// <param name="sizeMeasureElement">Element with <see cref="BarAutoSizeProperty"/> set to <see cref="AppBarAutoSizeElement.Measure"/></param>
+        private static void GetAutoSizeUiElements(DependencyObject parent, ICollection<FrameworkElement> sizeAddElements, out FrameworkElement? sizeMeasureElement)
+        {
+            sizeMeasureElement = null;
+            var childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+
+            for (var i = 0; i <= childrenCount - 1; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+
+                var sizeElement = AppBarAutoSizeElement.None;
+                if (child is FrameworkElement uiElement)
+                {
+                    sizeElement = GetBarAutoSize(uiElement);
+                    // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+                    switch (sizeElement)
+                    {
+                        case AppBarAutoSizeElement.Measure:
+                            sizeMeasureElement = uiElement;
+                            break;
+                        case AppBarAutoSizeElement.Add:
+                            sizeAddElements.Add(uiElement);
+                            break;
+                    }
+                }
+
+                if (VisualTreeHelper.GetChildrenCount(child) <= 0 || sizeElement == AppBarAutoSizeElement.Measure) continue;
+
+                //traverse to children
+                GetAutoSizeUiElements(child, sizeAddElements, out var tmpMeasureElement);
+                if (tmpMeasureElement != null) sizeMeasureElement = tmpMeasureElement;
+            }
+        }
+        #endregion
+
     }
 }

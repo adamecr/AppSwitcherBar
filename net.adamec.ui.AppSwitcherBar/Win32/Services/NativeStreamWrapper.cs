@@ -144,7 +144,9 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
         /// <exception cref="NotImplementedException"></exception>
         public void Write(byte[] pv, int cb, IntPtr pcbWritten)
         {
-            throw new NotImplementedException(nameof(Write));
+            //  throw new NotImplementedException(nameof(Write));
+            stream.Write(pv, 0, cb);
+            if (pcbWritten != IntPtr.Zero) Marshal.WriteInt64(pcbWritten, cb);
         }
     }
 }

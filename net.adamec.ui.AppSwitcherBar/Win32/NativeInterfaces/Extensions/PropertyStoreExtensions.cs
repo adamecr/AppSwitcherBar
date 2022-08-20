@@ -38,13 +38,13 @@ internal static class PropertyStoreExtensions
     }
 
     /// <summary>
-    /// Creates the <see cref="Properties"/> from <paramref name="propertyStore"/>
+    /// Creates the <see cref="ShellPropertiesSubset"/> from <paramref name="propertyStore"/>
     /// </summary>
-    /// <param name="propertyStore"><see cref="IPropertyStore"/> to build the <see cref="Properties"/> from</param>
-    /// <returns><see cref="Properties"/> created from <paramref name="propertyStore"/> or empty <see cref="Properties"/> when <paramref name="propertyStore"/> is null</returns>
-    public static Properties GetProperties(this IPropertyStore? propertyStore)
+    /// <param name="propertyStore"><see cref="IPropertyStore"/> to build the <see cref="ShellPropertiesSubset"/> from</param>
+    /// <returns><see cref="ShellPropertiesSubset"/> created from <paramref name="propertyStore"/> or empty <see cref="ShellPropertiesSubset"/> when <paramref name="propertyStore"/> is null</returns>
+    public static ShellPropertiesSubset GetProperties(this IPropertyStore? propertyStore)
     {
-        if (propertyStore is null) return new Properties(); //empty object
+        if (propertyStore is null) return new ShellPropertiesSubset(); //empty object
 
         var relaunchDisplayNameResource = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_RelaunchDisplayNameResource);
         var relaunchDisplayName =
@@ -57,7 +57,7 @@ internal static class PropertyStoreExtensions
         var relaunchIconResource = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_RelaunchIconResource);
         var icon = relaunchIconResource == null ? null : Resource.GetResourceIcon(relaunchIconResource, IconSizeEnum.Large);
 
-        var retVal = new Properties
+        var retVal = new ShellPropertiesSubset
         {
             ApplicationUserModelId = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID),
             RelaunchDisplayNameResource = relaunchDisplayNameResource,
@@ -69,8 +69,15 @@ internal static class PropertyStoreExtensions
             PreventPinning = propertyStore.GetPropertyValue(PropertyKey.PKEY_AppUserModel_PreventPinning, false),
             PackageFamilyName = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_PackageFamilyName),
             PackageFullName = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_PackageFullName),
+            PackageInstallPath = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_PackageInstallPath),
+            // ReSharper disable once RedundantTypeArgumentsOfMethod
+            HostEnvironment = propertyStore.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_HostEnvironment, 0),
+            ParsingName = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_ParsingName),
+            ParsingPath = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_ParsingPath),
+            LinkTargetParsingPath = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath),
+            PackageIconResource = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath)
         };
-       
+
         return retVal;
     }
 }

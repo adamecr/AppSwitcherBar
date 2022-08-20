@@ -304,5 +304,29 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
         {
             User32.PostMessage(hwnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
         }
+
+        /// <summary>
+        /// Sets the window to top of the z-order
+        /// </summary>
+        /// <param name="hwnd">HWND of window to set</param>
+        public static void SetWindowToTop(IntPtr hwnd)
+        {
+            User32.SetWindowPos(hwnd,
+                HWND_TOPMOST,
+                0, 0, 0, 0,
+                SetWindowPosFlags.IgnoreMove | SetWindowPosFlags.IgnoreResize | SetWindowPosFlags.DoNotActivate);
+        }
+
+        /// <summary>
+        /// Sets the window to bottom of the z-order
+        /// </summary>
+        /// <param name="hwnd">HWND of window to set</param>
+        public static void SetWindowToBottom(IntPtr hwnd)
+        {
+            User32.SetWindowPos(hwnd,
+                HWND_BOTTOM,
+                0, 0, 0, 0,
+                SetWindowPosFlags.IgnoreMove | SetWindowPosFlags.IgnoreResize | SetWindowPosFlags.DoNotActivate);
+        }
     }
 }

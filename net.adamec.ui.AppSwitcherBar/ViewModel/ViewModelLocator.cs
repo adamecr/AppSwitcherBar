@@ -36,8 +36,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// </summary>
         public ViewModelLocator()
         {
-            //create default AppSettings
-            designTimeAppSettings = new AppSettings();
+            designTimeAppSettings = AppSettings.DesignTimeAppSettings;
 
             //create the (dummy) design time logger
             using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.SetMinimumLevel(LogLevel.Trace).AddDebug().AddConsole());

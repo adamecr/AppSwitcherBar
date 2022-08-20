@@ -29,7 +29,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <summary>
         /// Some of the shell properties
         /// </summary>
-        public Properties ShellProperties { get; }
+        public ShellPropertiesSubset ShellProperties { get; }
 
         /// <summary>
         /// CTOR
@@ -39,7 +39,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <param name="executable">Link to the application (executable) if available</param>
         /// <param name="iconSource">Icon of the application if available</param>
         /// <param name="shellProperties">Some of the shell properties</param>
-        public InstalledApplication(string name, string? appUserModelId, string? executable, BitmapSource? iconSource, Properties shellProperties)
+        public InstalledApplication(string name, string? appUserModelId, string? executable, BitmapSource? iconSource, ShellPropertiesSubset shellProperties)
         {
             Name = name;
             AppUserModelId = appUserModelId;

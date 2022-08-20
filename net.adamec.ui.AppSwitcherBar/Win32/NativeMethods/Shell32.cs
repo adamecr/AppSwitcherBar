@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeConstants;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
@@ -160,5 +162,40 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeMethods
         /// </returns>
         [DllImport(DLL_NAME, CharSet = CharSet.Unicode)]
         internal static extern uint ExtractIconEx(string szFileName, int nIconIndex, IntPtr[]? phiconLarge, IntPtr[]? phiconSmall, uint nIcons);
+
+
+        /// <summary>
+        /// Creates and initializes a Shell item object from a pointer to an item identifier list (PIDL). The resulting shell item object supports the IShellItem2 interface.
+        /// </summary>
+        /// <param name="pidl">The source PIDL.</param>
+        /// <param name="riid">A reference to the IID of the requested interface.</param>
+        /// <param name="ppv">When this function returns, contains the interface pointer requested in riid. This will typically be IShellItem or IShellItem2.</param>
+        /// <returns>If this function succeeds, it returns S_OK. Otherwise, it returns an HRESULT error code.</returns>
+        [DllImport(DLL_NAME, PreserveSig = true)]
+        internal static extern HRESULT SHCreateItemFromIDList(
+            [In] IntPtr pidl,
+            [In, MarshalAs(UnmanagedType.LPStruct)] Guid riid,
+            [Out, MarshalAs(UnmanagedType.Interface, IidParameterIndex = 2)] out IShellItem2? ppv);
+
+        /// <summary>
+        /// Retrieves the display name of an item identified by its IDList.
+        /// </summary>
+        /// <param name="pidl">A PIDL that identifies the item.</param>
+        /// <param name="sigdnName">A value from the SIGDN enumeration that specifies the type of display name to retrieve.</param>
+        /// <param name="ppszName">A value that, when this function returns successfully, receives the address of a pointer to the retrieved display name.</param>
+        /// <returns>If this function succeeds, it returns S_OK. Otherwise, it returns an HRESULT error code.</returns>
+        [DllImport(DLL_NAME, SetLastError = true, PreserveSig = true)]
+        internal static extern HRESULT SHGetNameFromIDList([In] IntPtr pidl,
+            [In] SIGDN sigdnName,
+            [Out, MarshalAs(UnmanagedType.LPWStr)] out string ppszName);
+
+        /// <summary>
+        /// Returns the ITEMIDLIST structure associated with a specified file path. Call ILFree to release the ITEMIDLIST when you are finished with it.
+        /// </summary>
+        /// <param name="pszPath">A pointer to a null-terminated Unicode string that contains the path. This string should be no more than MAX_PATH characters in length, including the terminating null character.></param>
+        /// <returns>Returns a pointer to an ITEMIDLIST structure that corresponds to the path.</returns>
+        [DllImport(DLL_NAME, CharSet = CharSet.Auto)]
+        internal static extern IntPtr ILCreateFromPath([In, MarshalAs(UnmanagedType.LPWStr)] string pszPath);
     }
+
 }

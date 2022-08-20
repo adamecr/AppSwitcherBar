@@ -12,6 +12,8 @@ using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
+// ReSharper disable IdentifierTypo
+// ReSharper disable CommentTypo
 
 namespace net.adamec.ui.AppSwitcherBar.Win32.Services.Shell
 {
@@ -101,6 +103,43 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.Shell
         }
 
         /// <summary>
+        /// Replaces the known folder within the path with it's guid (if any)
+        /// </summary>
+        /// <param name="path">Path to check</param>
+        /// <returns>Path with known folder represented by its GUID (if applicable)</returns>
+        internal static string? ReplaceKnownFolderWithGuid(string? path)
+        {
+            if (path == null) return null;
+
+            var knownFolderManagerType = Type.GetTypeFromCLSID(new Guid(Win32Consts.CLSID_KnownFolderManager));
+            if (knownFolderManagerType == null) return path;
+            if (Activator.CreateInstance(knownFolderManagerType) is not IKnownFolderManager knownFolderManager) return path;
+
+            //FFP_EXACTMATCH = 0, FFFP_NEARESTPARENTMATCH=1
+            var hrs = knownFolderManager.FindFolderFromPath(path, 1, out var knownFolder);
+            if (!hrs.IsSuccess || knownFolder == null) return path;
+
+            hrs = knownFolder.GetPath(0, out var knownFolderPath);
+            if (!hrs.IsSuccess || knownFolderPath == null) return path;
+
+            hrs = knownFolder.GetId(out var knownFolderGuid);
+            if (!hrs.IsSuccess) return path;
+
+            if (knownFolderGuid == KnownFolderId.ProgramFiles)
+                knownFolderGuid = Environment.Is64BitOperatingSystem
+                    ? KnownFolderId.ProgramFilesX64
+                    : KnownFolderId.ProgramFilesX86;
+
+            if (knownFolderGuid == KnownFolderId.ProgramFilesCommon)
+                knownFolderGuid = Environment.Is64BitOperatingSystem
+                    ? KnownFolderId.ProgramFilesCommonX64
+                    : KnownFolderId.ProgramFilesCommonX86;
+
+            path = path.Replace(knownFolderPath, knownFolderGuid.ToString("B"));
+            return path;
+        }
+
+        /// <summary>
         /// Retrieve <see cref="IShellItem2"/> of the known folder
         /// </summary>
         /// <param name="knownFolderId">GUID of the known folder to get the shell item for</param>
@@ -182,6 +221,20 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.Shell
             {
                 if (itm is IShellItem2 shellItem2) action.Invoke(shellItem2);
             }
+        }
+
+        /// <summary>
+        /// Creates and initializes a Shell item object from a pointer to an item identifier list (PIDL)
+        /// </summary>
+        /// <param name="pidl">The source PIDL.</param>
+        /// <returns>Shell item object from a pointer to an item identifier list (PIDL) or null when the shell item can't be created</returns>
+        internal static IShellItem2? CreateShellItemFromIdList(IntPtr pidl)
+        {
+            var gIShellItem2 = new Guid(Win32Consts.IID_IShellItem2);
+            if (pidl != IntPtr.Zero && Shell32.SHCreateItemFromIDList(pidl, gIShellItem2, out var shellItem).IsSuccess)
+                return shellItem;
+
+            return null;
         }
     }
 }

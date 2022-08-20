@@ -29,7 +29,7 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
         /// Source window HWND
         /// </summary>
         public static readonly DependencyProperty SourceHwndProperty = DependencyProperty.Register(
-            "SourceHwnd",
+            nameof(SourceHwnd),
             typeof(IntPtr),
             typeof(ThumbnailPopup),
             new FrameworkPropertyMetadata(IntPtr.Zero));
@@ -47,7 +47,7 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
         /// Command to be called (from popup to model view) to show the thumbnail
         /// </summary>
         public static readonly DependencyProperty ThumbnailShowCommandProperty = DependencyProperty.Register(
-            "ThumbnailShowCommand",
+            nameof(ThumbnailShowCommand),
             typeof(ICommand),
             typeof(ThumbnailPopup),
             new FrameworkPropertyMetadata(null));
@@ -64,7 +64,7 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
         /// Command to be called (from popup to model view) to hide the thumbnail
         /// </summary>
         public static readonly DependencyProperty ThumbnailHideCommandProperty = DependencyProperty.Register(
-            "ThumbnailHideCommand",
+            nameof(ThumbnailHideCommand),
             typeof(ICommand),
             typeof(ThumbnailPopup),
             new FrameworkPropertyMetadata(null));

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using net.adamec.ui.AppSwitcherBar.Config;
 using net.adamec.ui.AppSwitcherBar.Dto;
 using net.adamec.ui.AppSwitcherBar.ViewModel;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeClasses;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeConstants;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces.Extensions;
@@ -35,6 +36,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         private readonly ILogger logger;
         // 1xxx - JumpList Service (19xx Errors/Exceptions)
+        // 12xx -   Taskbar pinned apps
         /// <summary>
         /// Log definition options
         /// </summary>
@@ -48,7 +50,6 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <summary>
         /// Logger message definition for LogJumpListProcessingStart
         /// </summary>
-
         private static readonly Action<ILogger, string, Exception?> __LogJumpListProcessingStartDefinition =
 
             LoggerMessage.Define<string>(
@@ -61,7 +62,6 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// Logs record (Information) when a jump list file processing starts
         /// </summary>
         /// <param name="fileName">Source file of the JumpList item (full path)</param>
-
         private void LogJumpListProcessingStart(string fileName)
         {
             if (logger.IsEnabled(LogLevel.Information))
@@ -77,7 +77,6 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <summary>
         /// Logger message definition for LogJumpListProcessingEnd
         /// </summary>
-
         private static readonly Action<ILogger, string, int, Exception?> __LogJumpListProcessingEndDefinition =
 
             LoggerMessage.Define<string, int>(
@@ -106,7 +105,6 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <summary>
         /// Logger message definition for LogGotJumpListItem
         /// </summary>
-
         private static readonly Action<ILogger, string, string, string?, bool, Exception?> __LogGotJumpListItemDefinition =
 
             LoggerMessage.Define<string, string, string?, bool>(
@@ -122,12 +120,38 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <param name="name">Name of JumpList item (category/title)</param>
         /// <param name="executable">Executable with optional arguments of JumpList item</param>
         /// <param name="hasIcon">Flag whether the JumpList item has an icon</param>
-
         private void LogGotJumpListItem(string source, string name, string? executable, bool hasIcon)
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 __LogGotJumpListItemDefinition(logger, source, name, executable, hasIcon, null);
+            }
+        }
+
+        //----------------------------------------------
+        // 1201 Got Pinned application
+        //----------------------------------------------
+
+        /// <summary>
+        /// Logger message definition for LogGotPinnedApplication
+        /// </summary>
+        private static readonly Action<ILogger, string, Exception?> __LogGotPinnedApplicationDefinition =
+
+            LoggerMessage.Define<string>(
+                LogLevel.Debug,
+                new EventId(1201, nameof(LogGotPinnedApplication)),
+                "Retrieved pinned application info: {pinnedAppInfo}",
+                LogOptions);
+
+        /// <summary>
+        /// Logs record (Debug) when a pinned application information is retrieved
+        /// </summary>
+        /// <param name="pinnedAppInfo">Information about pinned application</param>
+        private void LogGotPinnedApplication(PinnedAppInfo pinnedAppInfo)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                __LogGotPinnedApplicationDefinition(logger, pinnedAppInfo.ToString(), null);
             }
         }
 
@@ -445,30 +469,64 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 string? title = null;
                 var isStoreApp = false;
 
-                if (obj is IPersistFile persistFile)
+                if (obj is IPersistStream persistStream && !settings.JumpListUseTempFiles)
                 {
-                    //try to get information from shell properties.
+                    //Try to get information from shell properties.
+                    //Save .lnk to mem stream, build new COM CShellLink from memstream and retrieve IPropertyStore and IShellItem2
+                    //ShellItem don't contain the properties here, it's used just to get icon
 
-                    //It seems, that the easiest way is to save .lnk to temp file, retrieve IShellItem2 for the temp file, get the info and delete the temp file.
-                    //In-memory operations often failed at Win API level, probably due to wrong memory handling in my code
+                    using var memoryStream = new MemoryStream();
+                    var ist = new NativeStreamWrapper(memoryStream);
+                    persistStream.Save(ist, true);
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+
+                    // ReSharper disable SuspiciousTypeConversion.Global
+                    if (new CShellLink() is IShellLinkW memShellLink and IPersistStream memShellLinkPersistStream &&
+                       memShellLinkPersistStream.Load(ist).IsSuccess && memShellLink is IPropertyStore memShellLinkPropertyStore)
+                    {
+                        var idListPtr = memShellLink.GetIDList();
+                        var memShellLinkShellItem = Shell.Shell.CreateShellItemFromIdList(idListPtr);
+                        ProcessShellItem(memShellLinkPropertyStore, memShellLinkShellItem);
+                    }
+                    // ReSharper restore SuspiciousTypeConversion.Global
+                }
+
+
+                if (obj is IPersistFile persistFile && settings.JumpListUseTempFiles)
+                {
+                    //Try to get information from shell properties.
+                    //Save .lnk to temp file, retrieve IShellItem2 for the temp file, get the info and delete the temp file.
 
                     var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".lnk");
                     persistFile.Save(tempFile, false);
 
-                    var shellItem = Shell.Shell.GetShellItemForPath(tempFile);
+                    var tmpFileShellItem = Shell.Shell.GetShellItemForPath(tempFile);
+                    var tmpFilePropertyStore = tmpFileShellItem?.GetPropertyStore();
+                    ProcessShellItem(tmpFilePropertyStore, tmpFileShellItem);
+
+                    File.Delete(tempFile);
+                }
+
+                void ProcessShellItem(IPropertyStore? propertyStore, IShellItem2? shellItem)
+                {
                     if (shellItem != null)
                     {
-                        var propTitle = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Title);
+                        icon ??= Shell.Shell.GetShellItemBitmapSource(shellItem, 32);
+                    }
+
+                    if (propertyStore != null)
+                    {
+                        var propTitle = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Title);
                         if (!string.IsNullOrEmpty(propTitle))
                         {
                             var newTitle = Resource.GetIndirectString(propTitle, null);
                             if (newTitle != null) title = newTitle;
                         }
 
-                        icon ??= Shell.Shell.GetShellItemBitmapSource(shellItem, 32);
+
 
                         //Check for Store (UWP) app and it's properties that can "override" the standard link ones
-                        var appId = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID);
+                        var appId = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID);
                         if (!string.IsNullOrEmpty(appId))
                         {
                             isStoreApp = true;
@@ -476,33 +534,28 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                             var packageFullName = installedApplications.GetPackageFullName(appId);
 
 
-                            propTitle = shellItem.GetPropertyValue<string>(PropertyKey
-                                .PKEY_Title); //try again, now with package info
+                            propTitle = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Title); //try again, now with package info
                             if (!string.IsNullOrEmpty(propTitle))
                             {
                                 var newTitle = Resource.GetIndirectString(propTitle, packageFullName);
                                 if (newTitle != null) title = newTitle;
                             }
 
-                            propTitle = shellItem.GetPropertyValue<string>(PropertyKey
-                                .PKEY_AppUserModel_DestListProvidedTitle);
+                            propTitle = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_DestListProvidedTitle);
                             if (!string.IsNullOrEmpty(propTitle))
                             {
                                 var newTitle = Resource.GetIndirectString(propTitle, packageFullName);
                                 if (newTitle != null) title = newTitle;
                             }
 
-                            var propDescription =
-                                shellItem.GetPropertyValue<string>(PropertyKey
-                                    .PKEY_AppUserModel_DestListProvidedDescription);
+                            var propDescription = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_DestListProvidedDescription);
                             if (!string.IsNullOrEmpty(propDescription))
                             {
                                 var newDescription = Resource.GetIndirectString(propDescription, packageFullName);
                                 if (newDescription != null) description = newDescription;
                             }
 
-                            var propLogo =
-                                shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_DestListLogoUri);
+                            var propLogo = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_DestListLogoUri);
                             if (!string.IsNullOrEmpty(propLogo) && isStoreApp)
                             {
                                 if (packageFullName != null)
@@ -519,17 +572,15 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                                 }
                             }
 
-                            var propActivationContext =
-                                shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ActivationContext);
+                            var propActivationContext = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ActivationContext);
                             if (!string.IsNullOrEmpty(propActivationContext))
                             {
                                 arguments = propActivationContext;
                             }
                         }
                     }
-
-                    File.Delete(tempFile);
                 }
+
 
                 title ??= description ?? (!string.IsNullOrEmpty(targetPath)
                     ? !string.IsNullOrEmpty(Path.GetFileNameWithoutExtension(targetPath)) ?
@@ -569,7 +620,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 }
             }
         }
-
+        
         /// <summary>
         /// Parses the category footer from customs destinations file
         /// Just reads and forgets the data to move forward within the stream
@@ -644,5 +695,102 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
             stream.CopyTo(memoryStream);
             return memoryStream.ToArray();
         }
+
+        /// <summary>
+        /// Gets the information about the applications pinned to the taskbar
+        /// </summary>
+        /// <param name="knownFolders">Information about the known folder paths and GUIDs</param>
+        /// <returns>Array of information about the applications pinned to the taskbar</returns>
+        public PinnedAppInfo[] GetPinnedApplications(StringGuidPair[] knownFolders)
+        {
+            if (!settings.ShowPinnedApps) return Array.Empty<PinnedAppInfo>();
+
+            var titlePropertyKey = new PropertyKey("9e5e05ac-1936-4a75-94f7-4704b8b01923", 0);
+
+            var appInfos = new List<PinnedAppInfo>();
+            var objType = Type.GetTypeFromCLSID(new Guid(Win32Consts.CLSID_TaskbanPin), false);
+            if (objType == null) return Array.Empty<PinnedAppInfo>();
+
+            var obj = Activator.CreateInstance(objType);
+            if (obj is not IPinnedList3 pinnedList) return Array.Empty<PinnedAppInfo>();
+
+            var hrs = pinnedList.EnumObjects(out var iel);
+            if (!hrs.IsSuccess) return Array.Empty<PinnedAppInfo>();
+
+            hrs = iel.Reset();
+            if (!hrs.IsSuccess) return Array.Empty<PinnedAppInfo>();
+
+            var order = 0;
+            var iShellItem2Guid = new Guid(Win32Consts.IID_IShellItem2);
+            do
+            {
+                hrs = iel.Next(1, out var pidl, out _);
+                if (!hrs.IsS_OK) break; //S_FALSE is returned for end of enum, but it's also "success code", so explicit check needed here
+
+                hrs = Shell32.SHCreateItemFromIDList(pidl, iShellItem2Guid, out var shellItem);
+                if (!hrs.IsS_OK || shellItem == null) break;
+
+                var shellProperties = shellItem.GetProperties();
+                var type = shellProperties.IsStoreApp
+                    ? PinnedAppInfo.PinnedAppTypeEnum.Package
+                    : PinnedAppInfo.PinnedAppTypeEnum.Link;
+
+                var title =
+                    shellItem.GetPropertyValue<string>(titlePropertyKey) ??
+                    shellItem.GetPropertyValue<string>(PropertyKey.PKEY_ItemNameDisplay) ??
+                    "unknown";
+
+                var appId = shellProperties.ApplicationUserModelId;
+                var executable = GetExecutableFromLinkProps(shellProperties);
+                if (appId == null && executable != null)
+                {
+                    //appId can be an executable full path, ensure that known folders are transformed to their GUIDs
+                    appId = Shell.Shell.ReplaceKnownFolderWithGuid(executable);
+                }
+
+                var appInfo = new PinnedAppInfo(title, order, type, shellProperties, appId, executable);
+                appInfos.Add(appInfo);
+                order++;
+                Marshal.FreeCoTaskMem(pidl);
+                LogGotPinnedApplication(appInfo);
+            } while (hrs.IsS_OK);
+
+            return appInfos.ToArray();
+        }
+
+        /// <summary>
+        /// Returns the executable path from link properties
+        /// </summary>
+        /// <param name="shellProperties">Link properties to check</param>
+        /// <returns>Executable path if extracted from link properties</returns>
+        private static string? GetExecutableFromLinkProps(ShellPropertiesSubset shellProperties)
+        {
+            if (shellProperties.IsStoreApp) return shellProperties.ParsingPath;
+
+            var executable = shellProperties.LinkTargetParsingPath;
+            if (executable != null)
+            {
+                if (File.Exists(executable) && Path.GetExtension(executable).ToLowerInvariant() == ".exe") return executable;
+
+                //sometimes the LinkTargetParsingPath doesn't contain executable. Probably some issue with app or task bar. Try to get executable from link then
+
+                // ReSharper disable SuspiciousTypeConversion.Global
+                if (shellProperties.ParsingPath != null && File.Exists(shellProperties.ParsingPath) &&
+                    new CShellLink() is (IShellLinkW link and IPersistFile linkPersistFile))
+                // ReSharper restore SuspiciousTypeConversion.Global
+                {
+                    linkPersistFile.Load(shellProperties.ParsingPath, 0);
+
+                    //get basic link information
+                    var sb = new StringBuilder(260);
+                    var data = new WIN32_FIND_DATAW();
+                    var ret = link.GetPath(sb, sb.Capacity, data, 0);
+                    executable = ret.IsSuccess && sb.Length > 0 ? sb.ToString() : null;
+                }
+            }
+
+            return executable ?? shellProperties.ParsingPath;
+        }
     }
+
 }

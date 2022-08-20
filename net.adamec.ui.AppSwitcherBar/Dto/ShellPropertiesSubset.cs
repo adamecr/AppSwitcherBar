@@ -8,7 +8,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
     /// <summary>
     /// Properties retrieved from entity PropertyStore
     /// </summary>
-    public class Properties
+    public class ShellPropertiesSubset
     {
         /// <summary>
         /// Application User Model ID (AppUserModelID, AUMI)
@@ -90,6 +90,31 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         public string? RelaunchDisplayName { get; init; }
 
         /// <summary>
+        /// Host environment - 0 for Desktop App, 1 for Store/UWP app
+        /// </summary>
+        public uint HostEnvironment { get; init; }
+
+        /// <summary>
+        /// Flag whether the application is Store/UWP app (<see cref="HostEnvironment"/> is 1)
+        /// </summary>
+        public bool IsStoreApp => HostEnvironment == 1;
+
+        /// <summary>
+        /// The Shell namespace name of an item relative to a parent folder.
+        /// </summary>
+        public string? ParsingName { get; init; }
+
+        /// <summary>
+        /// The Shell namespace path to the item.
+        /// </summary>
+        public string? ParsingPath { get; init; }
+        
+        /// <summary>
+        /// The Shell namespace path to the target of the link item (if link)
+        /// </summary>
+        public string? LinkTargetParsingPath { get; init; }
+       
+        /// <summary>
         /// Package family name if package
         /// </summary>
         public string? PackageFamilyName { get; init; }
@@ -98,6 +123,16 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Package full name if package
         /// </summary>
         public string? PackageFullName { get; init; }
+
+        /// <summary>
+        /// Package install path if package
+        /// </summary>
+        public string? PackageInstallPath { get; init; }
+
+        /// <summary>
+        /// Package icon resource
+        /// </summary>
+        public string? PackageIconResource { get; init; }
 
         /// <summary>
         /// Get the string representation of the object

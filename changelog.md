@@ -3,6 +3,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.0] - 2022-08-20 ##
+### Added ###
+- **Application bar and application window buttons auto-size support**
+- **Application window buttons reorder support**
+- **Support for taskbar pinned applications**
+- Option to hide the applications having single window (if not pinned)
+- Persist and use the user settings - dock mode, autosize on/off, application bar dock size
+- Application settings: `AppBarAutoSize`,`AppBarButtonHeight`, `AppBarButtonMinWidthRatio`, `AppBarButtonMargin`, `JumpListUseTempFiles`, `AllowAppBarButtonReorder`, `ShowPinnedApps`, `HideSingleWindowApps`
+
+### Changed ###
+- Application settings defaults adjusted
+- JumpList links are by default processes in-memory (new functionality), however it's still possible to use processing using the temporary files when setting `JumpListUseTempFiles` is set to `true`.
+
+### Fixed ###
+- Properly handles the full screen applications
+
 ## [1.1.0] - 2022-08-02 ##
 ### Added ###
 - **Context menu allowing to close the application window, start a new instance of application and present the application JumpList**  (Feature flag `JumpList` for JumpLists)
@@ -25,5 +41,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added ###
 - Initial application release
 
+[1.2.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/adamecr/AppSwitcherBar/releases/tag/v1.0.0

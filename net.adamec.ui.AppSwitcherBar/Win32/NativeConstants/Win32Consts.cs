@@ -114,6 +114,10 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         /// Retains the current size (ignores the cx and cy parameters).
         /// </summary>
         internal const int SWP_NOSIZE = 0x0001;
+        /// <summary>
+        /// Does not activate the window. If this flag is not set, the window is activated and moved to the top of either the topmost or non-topmost group (depending on the setting of the hWndInsertAfter parameter).
+        /// </summary>
+        internal const int SWP_NOACTIVATE = 0x0010;
 
         /// <summary>
         /// A value for the fVisible member has been specified.
@@ -185,15 +189,20 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
 
         //class IDs
         internal const string CLSID_ShellLink = "00021401-0000-0000-C000-000000000046";
+        internal const string CLSID_TaskbanPin = "90aa3a4e-1cba-4233-b8bb-535773d48449";
+        internal const string CLSID_StartMenuPin = "A2A9545D-A0C2-42B4-9708-A0B2BADD77C8";
+        internal const string CLSID_KnownFolderManager = "4df0c730-df9d-4ae3-9153-aa6b82e9795a";
 
         //interface IDs
         internal const string IID_IPropertyStore = "886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99";
+        internal const string IID_IPersistStream = "00000109-0000-0000-C000-000000000046";
         internal const string IID_IShellFolder = "000214E6-0000-0000-C000-000000000046";
         internal const string IID_IShellLink = "000214F9-0000-0000-C000-000000000046";
         internal const string IID_IShellItem = "43826d1e-e718-42ee-bc55-a1e261c37bfe";
         internal const string IID_IShellItem2 = "7e9fb0d3-919f-4307-ab2e-9b1860310c93";
         internal const string IID_IShellItemArray = "B63EA76D-1F85-456F-A19C-48159EFA858B";
         internal const string IID_IEnumIDList = "000214F2-0000-0000-C000-000000000046";
+        internal const string IID_IEnumFullIDList = "d0191542-7954-4908-bc06-b2360bbe45ba";
         internal const string IID_IShellItemImageFactory = "bcc18b79-ba16-442f-80c4-8a59c30c463b";
         internal const string IID_IEnumShellItems = "70629033-e363-4a28-a567-0db78006e6d7";
         internal const string IID_IBindCtx = "0000000e-0000-0000-C000-000000000046";
@@ -207,5 +216,10 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         internal const string IID_IPropertyEnumTypeList = "A99400F4-3D84-4557-94BA-1242FB2CC9A6";
         internal const string IID_IPropertyStoreCapabilities = "c8e2d566-186e-4d49-bf41-6909ead56acc";
         internal const string IID_IApplicationActivationManager = "2e941141-7f97-4756-ba1d-9decde894a3d";
+        internal const string IID_IPinnedList3 = "0dd79ae2-d156-45d4-9eeb-3b549769e940";
+        internal const string IID_IFlexibleTaskbarPinnedList = "60274FA2-611F-4B8A-A293-F27BF103D148";
+        internal const string IID_IKnownFolder = "3AA7AF7E-9B36-420c-A8E3-F77D4674A488";
+        internal const string IID_IKnownFolderManager = "8BE2D872-86AA-4d47-B776-32CCA40C7018";
+
     }
 }

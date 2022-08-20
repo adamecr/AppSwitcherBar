@@ -3,28 +3,28 @@
 namespace net.adamec.ui.AppSwitcherBar.Wpf;
 
 /// <summary>
-/// <see cref="AppWindowButton.BuildContextMenuCommand"/> parameters
+/// <see cref="AppButton.BuildContextMenuCommand"/> parameters
 /// </summary>
 internal class BuildContextMenuCommandParams
 {
 
     /// <summary>
-    /// Application window button
+    /// Application button
     /// </summary>
-    public AppWindowButton Button { get; }
+    public AppButton Button { get; }
     /// <summary>
-    /// Application window information
+    /// Application button information
     /// </summary>
-    public WndInfo WindowInfo { get; }
+    public ButtonInfo ButtonInfo { get; }
 
     /// <summary>
     /// CTOR
     /// </summary>
-    /// <param name="button">Application window button</param>
-    /// <param name="windowInfo">Application window information</param>
-    public BuildContextMenuCommandParams(AppWindowButton button, WndInfo windowInfo)
+    /// <param name="button">Application button</param>
+    /// <param name="buttonInfo">Application button information</param>
+    public BuildContextMenuCommandParams(AppButton button, ButtonInfo buttonInfo)
     {
         Button = button;
-        WindowInfo = windowInfo;
+        ButtonInfo = buttonInfo;
     }
 }

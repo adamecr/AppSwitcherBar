@@ -36,13 +36,13 @@ internal static class ShellItemExtensions
     }
 
     /// <summary>
-    /// Creates the <see cref="Properties"/> from <paramref name="shellItem"/>
+    /// Creates the <see cref="ShellPropertiesSubset"/> from <paramref name="shellItem"/>
     /// </summary>
-    /// <param name="shellItem"><see cref="IShellItem2"/> to build the <see cref="Properties"/> from</param>
-    /// <returns><see cref="Properties"/> created from <paramref name="shellItem"/> or empty <see cref="Properties"/> when <paramref name="shellItem"/> is null</returns>
-    public static Properties GetProperties(this IShellItem2? shellItem)
+    /// <param name="shellItem"><see cref="IShellItem2"/> to build the <see cref="ShellPropertiesSubset"/> from</param>
+    /// <returns><see cref="ShellPropertiesSubset"/> created from <paramref name="shellItem"/> or empty <see cref="ShellPropertiesSubset"/> when <paramref name="shellItem"/> is null</returns>
+    public static ShellPropertiesSubset GetProperties(this IShellItem2? shellItem)
     {
-        if (shellItem is null) return new Properties(); //empty object
+        if (shellItem is null) return new ShellPropertiesSubset(); //empty object
 
         var relaunchDisplayNameResource = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_RelaunchDisplayNameResource);
         var relaunchDisplayName =
@@ -55,7 +55,7 @@ internal static class ShellItemExtensions
         var relaunchIconResource = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_RelaunchIconResource);
         var icon = relaunchIconResource == null ? null : Resource.GetResourceIcon(relaunchIconResource, IconSizeEnum.Large);
 
-        var retVal = new Properties
+        var retVal = new ShellPropertiesSubset
         {
             ApplicationUserModelId = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID),
             RelaunchDisplayNameResource = relaunchDisplayNameResource,
@@ -67,6 +67,13 @@ internal static class ShellItemExtensions
             PreventPinning = shellItem.GetPropertyValue(PropertyKey.PKEY_AppUserModel_PreventPinning, false),
             PackageFamilyName = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_PackageFamilyName),
             PackageFullName = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_PackageFullName),
+            PackageInstallPath = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_PackageInstallPath),
+            // ReSharper disable once RedundantTypeArgumentsOfMethod
+            HostEnvironment = shellItem.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_HostEnvironment, 0),
+            ParsingName = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_ParsingName),
+            ParsingPath = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_ParsingPath),
+            LinkTargetParsingPath = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath),
+            PackageIconResource = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath)
         };
 
         return retVal;

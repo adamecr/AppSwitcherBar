@@ -1,20 +1,21 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Media.Imaging;
+
 // ReSharper disable InvertIf
+// ReSharper disable IdentifierTypo
 
 namespace net.adamec.ui.AppSwitcherBar.Dto
 {
     /// <summary>
     /// Information about the window (task bar application)
     /// </summary>
-    public class WndInfo : INotifyPropertyChanged
+    public class WndInfo : ButtonInfo
     {
         /// <summary>
         /// Window handle
         /// </summary>
         public IntPtr Hwnd { get; }
+
         /// <summary>
         /// Window's thread ID
         /// </summary>
@@ -24,53 +25,6 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Window's process ID
         /// </summary>
         public uint ProcessId { get; }
-
-        /// <summary>
-        /// Application executable
-        /// </summary>
-        public string? Executable { get; }
-
-
-
-        /// <summary>
-        /// Window title
-        /// </summary>
-        public string title;
-        /// <summary>
-        /// Window title
-        /// </summary>
-        public string Title
-        {
-            get => title;
-            set
-            {
-                if (title != value)
-                {
-                    title = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Icon bitmap source (if available)
-        /// </summary>
-        private BitmapSource? bitmapSource;
-        /// <summary>
-        /// Icon bitmap source (if available)
-        /// </summary>
-        public BitmapSource? BitmapSource
-        {
-            get => bitmapSource;
-            set
-            {
-                if (bitmapSource != value)
-                {
-                    bitmapSource = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
 
         /// <summary>
         /// Flag whether it's current foreground window
@@ -93,61 +47,14 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         }
 
         /// <summary>
-        /// Some of the shell properties
-        /// </summary>
-        private Properties shellProperties = new();
-
-        /// <summary>
-        /// Some of the shell properties
-        /// </summary>
-        public Properties ShellProperties
-        {
-            get => shellProperties;
-            set
-            {
-                if (shellProperties != value)
-                {
-                    shellProperties = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        /// <summary>
-        /// ApplicationUserModelId
-        /// </summary>
-        private string? appId;
-        /// <summary>
-        /// ApplicationUserModelId
-        /// </summary>
-        public string? AppId
-        {
-            get => appId;
-            set
-            {
-                if (appId != value)
-                {
-                    appId = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-
-        /// <summary>
         /// Change status used when (re)evaluating the windows
         /// </summary>
         public ChangeStatusEnum ChangeStatus { get; private set; }
 
         /// <summary>
-        /// Identifier of the "group" the window belongs to.
-        /// It's used for grouping the window buttons of the same application together
-        /// Priority: <see cref="AppId"/>, <see cref="Executable"/>, <see cref="ProcessId"/>
+        /// <see cref="ProcessId"/> is used as a fallback when neither AppId not Executable is known or not set yet
         /// </summary>
-        public string Group =>
-            !string.IsNullOrEmpty(AppId) ? AppId : //includes the "Executable option" as the Executable is the fallback source for AppId whenever the AppId is set
-            !string.IsNullOrEmpty(Executable) ? Executable : //when AppId is not set yet and executable is set
-            ProcessId.ToString(); //process ID is used as a fallback when neither AppId not Executable is known or not set yet
+        protected override string GroupFallback => ProcessId.ToString();
 
         /// <summary>
         /// CTOR
@@ -158,13 +65,12 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <param name="processId">Window's process ID</param>
         /// <param name="executable">Application executable</param>
         public WndInfo(IntPtr hWnd, string title, uint threadId, uint processId, string? executable)
+        : base(title, executable, null)
         {
             ChangeStatus = ChangeStatusEnum.New;
-            this.title = title;
             Hwnd = hWnd;
             ThreadId = threadId;
             ProcessId = processId;
-            Executable = executable;
         }
 
         /// <summary>
@@ -185,18 +91,26 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         }
 
         /// <summary>
-        /// Occurs when a property changes
+        /// Sets <see cref="ButtonInfo.GroupIndex"/> and <see cref="ButtonInfo.WindowIndex"/>
         /// </summary>
-        public event PropertyChangedEventHandler? PropertyChanged;
+        /// <param name="groupIndex">New <see cref="ButtonInfo.GroupIndex"/></param>
+        /// <param name="windowIndex">New <see cref="ButtonInfo.WindowIndex"/></param>
+        /// <returns>This object</returns>
+        public override WndInfo SetIndicies(int groupIndex, int windowIndex)
+        {
+            base.SetIndicies(groupIndex, windowIndex);
+            return this;
+        }
+
 
         /// <summary>
-        /// Raise <see cref="PropertyChanged"/> event
+        /// Raise <see cref="ButtonInfo.PropertyChanged"/> event
         /// </summary>
         /// <param name="propertyName">Name of the property changed</param>
-        private void OnPropertyChanged([CallerMemberName] string propertyName = "")
+        protected override void OnPropertyChanged([CallerMemberName] string propertyName = "")
         {
             if (ChangeStatus != ChangeStatusEnum.New) ChangeStatus = ChangeStatusEnum.Changed;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            base.OnPropertyChanged(propertyName);
         }
 
         /// <summary>
@@ -205,7 +119,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <returns>String representation of the object</returns>
         public override string ToString()
         {
-            return $"{Title} ({Hwnd}) T:{ThreadId}, P:{ProcessId}, A:{AppId}, E:{Executable}";
+            return $"{Title} ({Hwnd}) Idx:{GroupIndex}/{WindowIndex} T:{ThreadId}, P:{ProcessId}, A:{AppId}, E:{Executable}";
         }
 
         /// <summary>

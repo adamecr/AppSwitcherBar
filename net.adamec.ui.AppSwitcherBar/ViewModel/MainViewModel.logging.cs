@@ -30,6 +30,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         // ----
         // 1xxx - JumpList Service (19xx Errors/Exceptions)
         // 2xxx - Startup Service (29xx Errors/Exceptions)
+        // 3xxx - AppBarWindow (39xx Errors/Exceptions)
 
         /// <summary>
         /// Log definition options
@@ -217,13 +218,13 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// Logger message format for LogBackgroundDataInitTelemetry
         /// </summary>
         private static readonly string __LogBackgroundDataInitTelemetryFormatString =
-            "Finished retrieving background data at {timestampFinished}. Success:{isSuccess}. Duration {duration} (Installed Apps:{durationInstalledApps}, KnownFolders:{durationKnownFolders}), Result:{resultMsg}";
+            "Finished retrieving background data at {timestampFinished}. Success:{isSuccess}. Duration {duration} (Installed Apps:{durationInstalledApps}), Result:{resultMsg}";
 
         /// <summary>
         /// Logger message definition for LogBackgroundDataInitTelemetry (Info)
         /// </summary>
-        private static readonly Action<ILogger, DateTime, bool, int, int, int, string, Exception?> __LogBackgroundDataInitTelemetryInfoDefinition =
-            LoggerMessage.Define<DateTime, bool, int, int, int, string>(
+        private static readonly Action<ILogger, DateTime, bool, int, int, string, Exception?> __LogBackgroundDataInitTelemetryInfoDefinition =
+            LoggerMessage.Define<DateTime, bool, int, int, string>(
                 LogLevel.Information,
                 new EventId(301, nameof(LogBackgroundDataInitTelemetry)),
                 __LogBackgroundDataInitTelemetryFormatString,
@@ -238,8 +239,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <param name="resultMsg">Result message - contains OK or error message</param>
         /// <param name="duration">Total duration of background data retrieval (in ms)</param>
         /// <param name="durationInstalledApps">Duration of installed applications data retrieval (in ms)</param>
-        /// <param name="durationKnownFolders">Duration of known folders data retrieval (in ms)</param>
-        private void LogBackgroundDataInitTelemetry(LogLevel level, DateTime timestampFinished, bool isSuccess, string resultMsg, int duration, int durationInstalledApps, int durationKnownFolders)
+        private void LogBackgroundDataInitTelemetry(LogLevel level, DateTime timestampFinished, bool isSuccess, string resultMsg, int duration, int durationInstalledApps)
         {
             if (!logger.IsEnabled(level)) return;
 
@@ -247,10 +247,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             switch (level)
             {
                 case LogLevel.Information:
-                    __LogBackgroundDataInitTelemetryInfoDefinition(logger, timestampFinished, isSuccess, duration, durationInstalledApps, durationKnownFolders, resultMsg, null);
+                    __LogBackgroundDataInitTelemetryInfoDefinition(logger, timestampFinished, isSuccess, duration, durationInstalledApps, resultMsg, null);
                     break;
                 case LogLevel.Error:
-                    __LogBackgroundDataInitTelemetryDefinition(logger, timestampFinished, isSuccess, duration, durationInstalledApps, durationKnownFolders, resultMsg, null);
+                    __LogBackgroundDataInitTelemetryDefinition(logger, timestampFinished, isSuccess, duration, durationInstalledApps, resultMsg, null);
                     break;
             }
         }
@@ -316,8 +316,8 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <summary>
         /// Logger message definition for LogBackgroundDataInitTelemetry (Error)
         /// </summary>
-        private static readonly Action<ILogger, DateTime, bool, int, int, int, string, Exception?> __LogBackgroundDataInitTelemetryDefinition =
-            LoggerMessage.Define<DateTime, bool, int, int, int, string>(
+        private static readonly Action<ILogger, DateTime, bool, int, int, string, Exception?> __LogBackgroundDataInitTelemetryDefinition =
+            LoggerMessage.Define<DateTime, bool, int, int, string>(
                 LogLevel.Error,
                 new EventId(902, nameof(LogBackgroundDataInitTelemetry)),
                 __LogBackgroundDataInitTelemetryFormatString,

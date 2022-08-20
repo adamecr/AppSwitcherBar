@@ -1,4 +1,5 @@
 ﻿using net.adamec.ui.AppSwitcherBar.Dto;
+// ReSharper disable CommentTypo
 
 namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
 
@@ -15,4 +16,12 @@ public interface IJumpListService
     /// <param name="installedApplications">Information about installed applications</param>
     /// <returns>Array of JumpList items retrieved for given <paramref name="appId"/></returns>
     LinkInfo[] GetJumpListItems(string appId, InstalledApplications installedApplications);
+
+
+    /// <summary>
+    /// Gets the information about the applications pinned to the taskbar
+    /// </summary>
+    /// <param name="knownFolders">Information about the known folder paths and GUIDs</param>
+    /// <returns>Array of information about the applications pinned to the taskbar</returns>
+    PinnedAppInfo[] GetPinnedApplications(StringGuidPair[] knownFolders);
 }

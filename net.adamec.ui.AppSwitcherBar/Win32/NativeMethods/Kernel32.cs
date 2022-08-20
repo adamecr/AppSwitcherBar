@@ -87,5 +87,18 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeMethods
         /// <returns> If the function succeeds it returns ERROR_SUCCESS Otherwise, the function returns an error code. </returns>
         [DllImport(DLL_NAME, SetLastError = false, ExactSpelling = true, CharSet = CharSet.Unicode)]
         public static extern long GetPackagePathByFullName(string packageFullName, ref uint pathLength, [Optional] StringBuilder path);
+
+
+        /// <summary>
+        /// Retrieves the short path form of the specified path.
+        /// </summary>
+        /// <param name="path">The path string.</param>
+        /// <param name="shortPath">A pointer to a buffer to receive the null-terminated short form of the path that lpszLongPath specifies.</param>
+        /// <param name="shortPathLength">The size of the buffer that lpszShortPath points to, in TCHARs.</param>
+        /// <returns>If the function succeeds, the return value is the length, in TCHARs, of the string that is copied to lpszShortPath, not including the terminating null character.
+        /// If the lpszShortPath buffer is too small to contain the path, the return value is the size of the buffer, in TCHARs, that is required to hold the path and the terminating null character.
+        /// If the function fails for any other reason, the return value is zero.</returns>
+        [DllImport(DLL_NAME, CharSet = CharSet.Auto)]
+        public static extern int GetShortPathName([MarshalAs(UnmanagedType.LPTStr)] string path, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder shortPath, int shortPathLength);
     }
 }

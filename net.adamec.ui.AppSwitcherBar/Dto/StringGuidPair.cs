@@ -5,7 +5,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
     /// <summary>
     /// Container holding the pair of <see cref="string"/> and <see cref="Guid"/> values
     /// </summary>
-    internal class StringGuidPair
+    public class StringGuidPair
     {
         
         /// <summary>

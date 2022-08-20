@@ -44,7 +44,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.Startup
                 LogOptions);
 
         /// <summary>
-        /// Logs record (Debug) when a Windows startup link is created
+        /// Logs record (Information) when a Windows startup link is created
         /// </summary>
         /// <param name="linkPath">Full path to the link file</param>
         private void LogStartupLinkCreated(string linkPath)
@@ -71,7 +71,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.Startup
                 LogOptions);
 
         /// <summary>
-        /// Logs record (Debug) when a Windows startup link is removed
+        /// Logs record (Information) when a Windows startup link is removed
         /// </summary>
         /// <param name="linkPath">Full path to the link file</param>
         private void LogStartupLinkRemoved(string linkPath)

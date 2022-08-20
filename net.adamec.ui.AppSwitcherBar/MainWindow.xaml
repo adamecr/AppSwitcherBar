@@ -8,9 +8,11 @@
     xmlns:appBar="clr-namespace:net.adamec.ui.AppSwitcherBar.AppBar"
     xmlns:viewModel="clr-namespace:net.adamec.ui.AppSwitcherBar.ViewModel"
     xmlns:wpf="clr-namespace:net.adamec.ui.AppSwitcherBar.Wpf"
+    xmlns:dto="clr-namespace:net.adamec.ui.AppSwitcherBar.Dto"
     mc:Ignorable="d"
     x:Name="Root"
-    Title="MainWindow" Icon="/AppSwitcherBar.ico">
+    Title="MainWindow"
+    Icon="/AppSwitcherBar.ico" >
     <appBar:AppBarWindow.Resources>
         <viewModel:ViewModelLocator x:Key="ViewModelLocator" />
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -18,7 +20,7 @@
     <appBar:AppBarWindow.DataContext>
         <Binding Source="{StaticResource ViewModelLocator}" Path="MainViewModel" />
     </appBar:AppBarWindow.DataContext>
-   
+
     <DockPanel >
         <DockPanel.Style>
             <Style TargetType="{x:Type DockPanel}">
@@ -32,7 +34,7 @@
                 </Style.Triggers>
             </Style>
         </DockPanel.Style>
-        <Thumb Background="Gray" DragCompleted="ResizeDragCompleted" DragDelta="ResizeDragDelta" DragStarted="ResizeDragStarted">
+        <Thumb Background="Gray" DragCompleted="ResizeDragCompleted" DragDelta="ResizeDragDelta" DragStarted="ResizeDragStarted" appBar:AppBarWindow.BarAutoSize="Add">
             <Thumb.Style>
                 <Style TargetType="{x:Type Thumb}">
                     <Style.Triggers>
@@ -61,9 +63,9 @@
             </Thumb.Style>
         </Thumb>
 
-        <WrapPanel Margin="3">
-            <WrapPanel.Style>
-                <Style TargetType="{x:Type WrapPanel}">
+        <StackPanel Margin="3">
+            <StackPanel.Style>
+                <Style TargetType="{x:Type StackPanel}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
                             <Setter Property="Orientation" Value="Horizontal" />
@@ -83,10 +85,10 @@
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
-            </WrapPanel.Style>
-            <Button Click="Close" Content="{iconPacks:BootstrapIcons Kind=X}" Margin="1"/>
-            <ToggleButton Content="{iconPacks:BootstrapIcons Kind=Gear}" x:Name="SettingToggle" Margin="1" />
-        </WrapPanel>
+            </StackPanel.Style>
+            <Button Click="Close" Content="{iconPacks:BootstrapIcons Kind=X, Width=13, Height=13 }" Margin="1" Width="18" Height="18"/>
+            <ToggleButton Content="{iconPacks:BootstrapIcons Kind=Gear, Width=13, Height=13}" x:Name="SettingToggle" Margin="1" Width="18" Height="18" />
+        </StackPanel>
 
         <WrapPanel Margin="3"  >
             <WrapPanel.Style>
@@ -139,6 +141,11 @@
                            />
             </StackPanel>
 
+            <StackPanel Orientation="Horizontal" Margin="1" >
+                <CheckBox  Content="Auto size" Margin="1" VerticalAlignment="Center" Width="120"
+                           IsChecked="{Binding Path=IsAutoSized, ElementName=Root, Mode=TwoWay}"/>
+            </StackPanel>
+
         </WrapPanel>
 
         <WrapPanel>
@@ -161,41 +168,83 @@
                 </Style>
             </WrapPanel.Style>
 
-
             <ItemsControl Margin="5" ItemsSource="{Binding ButtonManager}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <WrapPanel/>
+                        <appBar:AppButtonsPanel
+                            ButtonHeight="{Binding Path=Settings.AppBarButtonHeight, ElementName=Root}"
+                            ButtonMaxWidth="{Binding Path=Settings.AppBarButtonWidth, ElementName=Root}"
+                            ButtonMinWidthRatio="0.7"
+                            ButtonMargin="{Binding Path=Settings.AppBarButtonMargin, ElementName=Root}"
+                            IsAutoSized="{Binding Path=IsAutoSized, ElementName=Root}"
+                            AllowButtonReorder="{Binding Path=Settings.AllowAppBarButtonReorder, ElementName=Root}"
+                            appBar:AppBarWindow.BarAutoSize="Measure" >
+                            <appBar:AppButtonsPanel.Style>
+                                <Style TargetType="{x:Type appBar:AppButtonsPanel}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                                            <Setter Property="Orientation" Value="Vertical" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                                            <Setter Property="Orientation" Value="Vertical" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                                            <Setter Property="Orientation" Value="Horizontal" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                                            <Setter Property="Orientation" Value="Horizontal" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </appBar:AppButtonsPanel.Style>
+                        </appBar:AppButtonsPanel>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate  >
-                        <wpf:AppWindowButton Margin="1"
-                                             WindowInfo="{Binding}"
-                                             Command="{Binding DataContext.ToggleApplicationWindowCommand, ElementName=Root}" CommandParameter="{Binding Path=Hwnd}"
+                        <wpf:AppButton Margin="{Binding Settings.AppBarButtonMargin, ElementName=Root}"
+                                             ButtonInfo="{Binding}"
                                              BuildContextMenuCommand="{Binding DataContext.BuildContextMenuCommand, ElementName=Root}"
-                                             ToolTip="{Binding Path=Title}" 
-                                             Width="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
-                                             MaxWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}" 
-                                             MinWidth="{Binding Path=Settings.AppBarButtonWidth ,ElementName=Root}"
-                                             VerticalContentAlignment="Center" HorizontalContentAlignment="Left" x:Name="WndButton">
-                            <wpf:AppWindowButton.Style>
-                                <Style TargetType="{x:Type wpf:AppWindowButton}">
+                                             ToolTip="{Binding Path=Title}"
+                                             VerticalContentAlignment="Center" HorizontalContentAlignment="Left">
+                            <wpf:AppButton.Style>
+                                <Style TargetType="{x:Type wpf:AppButton}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Path=IsForeground}" Value="True">
+                                        <DataTrigger Binding="{Binding Path=Type}" Value="{x:Type dto:WndInfo}">
+                                            <Setter Property="Command" Value="{Binding DataContext.ToggleApplicationWindowCommand, ElementName=Root}" />
+                                            <Setter Property="CommandParameter" Value="{Binding Path=Self.(dto:WndInfo.Hwnd)}"></Setter>
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Path=Type}" Value="{x:Type dto:WndInfo}" />
+                                                <Condition Binding="{Binding Path=Self.(dto:WndInfo.IsForeground)}" Value="True" />
+                                            </MultiDataTrigger.Conditions>
                                             <Setter Property="FontWeight" Value="Bold" />
                                             <Setter Property="BorderThickness" Value="2" />
                                             <Setter Property="Background" Value="Navy" />
                                             <Setter Property="Foreground" Value="White" />
+                                        </MultiDataTrigger>
+                                        
+                                        <DataTrigger Binding="{Binding Path=Type}" Value="{x:Type dto:PinnedAppInfo}">
+                                            <Setter Property="Command" Value="{Binding DataContext.LaunchPinnedAppCommand, ElementName=Root}" />
+                                            <Setter Property="CommandParameter" Value="{Binding Path=.}"></Setter>
+                                            <Setter Property="Background" Value="WhiteSmoke" />
+                                            <Setter Property="FontStyle" Value="Italic"/>
                                         </DataTrigger>
+                                        <Trigger Property="IsDragAndDropSource" Value="True">
+                                            <Setter Property="Background" Value="#FFB8E4FE" />
+                                        </Trigger>
+                                        <Trigger Property="IsDragAndDropTarget" Value="True">
+                                            <Setter Property="Background" Value="DarkGray" />
+                                        </Trigger>
                                     </Style.Triggers>
                                 </Style>
-                            </wpf:AppWindowButton.Style>
-                            <wpf:AppWindowButton.ContextMenu>
+                            </wpf:AppButton.Style>
+                            <wpf:AppButton.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem>Initial menu; this will be replaced ...</MenuItem>
                                 </ContextMenu>
-                            </wpf:AppWindowButton.ContextMenu>
+                            </wpf:AppButton.ContextMenu>
                             <Grid Margin="2">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="30" />
@@ -203,22 +252,34 @@
                                 </Grid.ColumnDefinitions>
                                 <Image Grid.Column="0" Source="{Binding Path=BitmapSource}" Width="16" Height="16" Stretch="Fill"  Margin="0,0,5,0" />
                                 <TextBlock Grid.Column="1" Text="{Binding Path=Title}" TextTrimming="CharacterEllipsis"/>
-                                <wpf:ThumbnailPopup IsOpen="{Binding ElementName=WndButton, Path=IsMouseOver, Mode=OneWay}"
-                                                    SourceHwnd="{Binding Path=Hwnd}"
-                                                    ThumbnailShowCommand="{Binding Path=DataContext.ShowThumbnailCommand, ElementName=Root}"
-                                                    ThumbnailHideCommand="{Binding Path=DataContext.HideThumbnailCommand, ElementName=Root}"
-                                                    HorizontalOffset="0"
-                                                    VerticalOffset="-1"
-                                                    AllowsTransparency="True"
-                                                    Width="{Binding Path=Settings.AppBarThumbnailWidth ,ElementName=Root}"
-                                                    Height="{Binding Path=Settings.AppBarThumbnailHeight ,ElementName=Root}"
-                                                    PlacementTarget="{Binding ElementName=WndButton}">
-                                    <Border BorderThickness="1" BorderBrush="Gainsboro" Background="WhiteSmoke" CornerRadius="5">
-
-                                    </Border>
+                                <wpf:ThumbnailPopup 
+                                    HorizontalOffset="0"
+                                    VerticalOffset="-1"
+                                    AllowsTransparency="True"
+                                    Width="{Binding Path=Settings.AppBarThumbnailWidth ,ElementName=Root}"
+                                    Height="{Binding Path=Settings.AppBarThumbnailHeight ,ElementName=Root}"
+                                    PlacementTarget="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type wpf:AppButton}}}">
+                                    <Border BorderThickness="1" BorderBrush="Gainsboro" Background="WhiteSmoke" CornerRadius="5" />
+                                    <wpf:ThumbnailPopup.Style>
+                                        <Style TargetType="wpf:ThumbnailPopup">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Path=Type}" Value="{x:Type dto:WndInfo}">
+                                                    <Setter Property="SourceHwnd" Value="{Binding Path=Self.(dto:WndInfo.Hwnd)}" />
+                                                    <Setter Property="IsOpen" Value="{Binding CanShowThumbnail, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type wpf:AppButton}}}"/>
+                                                    <Setter Property="ThumbnailShowCommand" Value="{Binding Path=DataContext.ShowThumbnailCommand, ElementName=Root}" />
+                                                    <Setter Property="ThumbnailHideCommand" Value="{Binding Path=DataContext.HideThumbnailCommand, ElementName=Root}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Path=Type}" Value="{x:Type dto:PinnedAppInfo}">
+                                                    <Setter Property="IsOpen" Value="False" />
+                                                    <Setter Property="IsEnabled" Value="False" />
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </wpf:ThumbnailPopup.Style>
                                 </wpf:ThumbnailPopup>
                             </Grid>
-                        </wpf:AppWindowButton>
+                        </wpf:AppButton>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

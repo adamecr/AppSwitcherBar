@@ -1,13 +1,32 @@
 # AppSwitcherBar #
 
-`AppSwitcherBar` is a proof-of-concept application providing the application bar complementary to Windows 11 Taskbar with ungrouped application windows buttons for easy one-click application switching.
+`AppSwitcherBar` provides the application bar complementary to Windows 11 Taskbar with ungrouped application windows buttons for easy one-click application switching.
 
 I did not use any invasive techniques that replace the Win11 task bar as I use Win11 for my day-job and didn't want to potentially jeopardize the system stability. `AppSwitcherBar` is not a substitute for Win11 task bar, but it's a complement that can "sit on top of the taskbar" and provide the ungrouped buttons with the possibility to quickly switch between the application by single mouse click. 
 
 *Note: It's built as NET6 WPF application, but as it heavily uses the Win32 API, it's bound to Windows OS by design (tested on Windows 11 and Windows 10).*
 
 ## Quick Start ##
-To start `AppSwitcherBar`, just run `AppSwitcherBar.exe`. This will create the application bar (window) and dock it to the edge of monitor as configured in application settings (bottom edge is the default). When there is a Windows Taskbar at the same edge, the application bar is placed "besides" towards the screen content. The application bar behaves similar way like the Taskbar - it will reduce the area for the other applications so they will not overlap even when maximized.
+To start `AppSwitcherBar`, just run `AppSwitcherBar.exe`. 
+Main features
+ - Top level **application windows** are presented as **buttons within the bar**
+ - **Applications pinned to task bar** without any window open are presented as light background buttons with title in italics. **Click** on the button to launch the pinned application.
+ - The buttons for windows of the same applications are displayed together but there is always a button for each top level window (this is called grouping here)
+ - Optionally, it's possible to hide the applications (buttons) having only single window (use `HideSingleWindowApps` setting). When the pinned applications support is on and the application has a pin, it will be not be hiden even having a single window.
+ - **Click** on the application window button **to switch to application** or to minimize the window of foreground applicaiton
+ - **Hover the mouse** over the application window button **to show the live thumbnail** of the window
+ - **Drag and drop** (using mouse and left button) the application window buttons **to reorder** them. You can reorder the same application windows ("within group") or the whole applications ("groups")
+ - **Right click** on the application window button for the context menu with possibility to **close the window**, **start a new application instance** or **launch** the (recent) **item or task from JumpList**.
+ - Toggle the **settings panel** using the **`Gear` icon**.
+   - **Set the docking edge** (top, bottom, left, right)
+   - **Choose the monitor** where to display the `AppSwitcherBar`
+   - Enable/disable bar and application window button **auto-size**
+   - Enable/disable **starting** the `AppSwitcherBar` **on Windows start**
+ - **Close the `AppSwitcherBar`** using the **`X` icon**.
+
+
+ ## Features ##
+`AppSwitcherBar` will create the application bar (window) and dock it to the edge of monitor as configured in application settings (bottom edge is the default). When there is a Windows Taskbar at the same edge, the application bar is placed "besides" towards the screen content. The application bar behaves similar way like the Taskbar - it will reduce the area for the other applications so they will not overlap even when maximized.
 
 ![Main AppSwitcherBar window](doc/img/AppSwitcherBar.png)
 
@@ -26,15 +45,30 @@ Hovering over the button pops up the live thumbnail of the application window. A
 
 ![Application window thumbnail](doc/img/Thumbnail.png)
 
-Right mouse button click on the button opens the context menu allowing to start a new instance of application or close the window. `Cancel` menu item just closes the menu without any action or you can simply click anywhere outside the menu.
+
+`AppSwitcherBar` shows the also the buttons of the applications pinned to the task bar as light buttons ("pins") when there is no window open for the application. The pin button doesn't have the thumbnail and click to the button launches the application.
+*Note: The functionality uses undocumented Windows interface `IPinnedList3`, so it might not be stable. Use the setting `ShowPinnedApps` to switch it off in case of issues.*
+
+![Application pin button](doc/img/Pin.png)
+
+Application window or pin buttons can be reordered using mouse drag and drop. Drag the source button and drop it to the target button. When dragging over the buttons, the cursor will signal where the source will be placed if droped here. When dragging to the left/top, the source will be placed before the target. When dragging to right/bottom, the source will be placed after the target.
+When the source and target window buttons belongs to the same application, only the single window button will be moved to the new position ("within the group"). The source button is in light blue color, the target in dark gray.
+
+![Application pin button](doc/img/Reorder1.png)
+
+When the source and target window buttons belongs to different applications, all (source) application window buttons will be moved to the new position. The source group is in light blue color, the target one in dark gray.
+
+![Application pin button](doc/img/Reorder2.png)
+
+
+
+Right mouse button click on the button representing a window, opens the context menu allowing to start a new instance of application or close the window. `Cancel` menu item just closes the menu without any action or you can simply click anywhere outside the menu.
 
 ![Right click menu](doc/img/RightClick.png)
 
 When the `JumpList` feature flag is set (true by default) and the application provides JumpList, its items are also added to the context menu and can be used to launch the documents or tasks as defined by the application.
 
 ![JumpList menu](doc/img/JumpList.png)
-
-Neither the application bar nor the window buttons auto-size yet, their size is usually configurable. The application bar can be resized using the drag&drop thumb at the inner edge (the one towards the "content" area).
 
 Use the "X" icon to close the application and restore the content area.
 
@@ -43,16 +77,27 @@ The UI provides a few "on screen" (runtime) settings. Click to gear icon to togg
 ![Settings panel](doc/img/Settings.png)
 
 The top dropdown allows to change the position of the application bar (dock mode).
+
 ![Settings panel - dock position](doc/img/Edge.png)
 
 The second dropdown allows to move the application bar to different monitor when running in multiple displays environment. The primary display is used at startup.
+
 ![Settings panel - display](doc/img/Monitor.png)
 
-The collection of application windows (buttons) is periodically updated and the changes are applied incrementally to keep the order and position within the bar. Besides the data that can be directly retrieved during the window enumeration, `AppSwitcherBar` also use some "global" helper data. The main example are the data about applications installed and available for current user within the system. Installed applications data are used for filling some gaps when the proper information is not retrieved directly from application window, for example icon for Windows Store apps. Installed applications data are also important to get the right Application User Model ID (used for example for grouping or JumpLists) as only a few windows or processes provide it directly. Retrieving installed application data is an operation that typically takes a few seconds, so these helper data are being retrieved on background at startup. The main `AppSwitcherBar` functionality is available during the background data retrieval, user is just notified by "Arrow with CD" cursor when hovering over the buttons, that the retrieval is still in progress.
+The collection of application windows (buttons) is periodically updated and the changes are applied incrementally to keep the order and position within the bar. Besides the data that can be directly retrieved during the window enumeration, `AppSwitcherBar` also use some "global" helper data about applications installed and available for current user within the system. Installed applications data are used for filling some gaps when the proper information is not retrieved directly from application window, for example icon for Windows Store apps. Installed applications data are also important to get the right Application User Model ID (used for example for grouping or JumpLists) as only a few windows or processes provide it directly. Retrieving installed application data is an operation that typically takes a few seconds, so these helper data are being retrieved on background at startup. The main `AppSwitcherBar` functionality is available during the background data retrieval, user is just notified by "Arrow with CD" cursor when hovering over the buttons, that the retrieval is still in progress.
 
-The `Refresh` button in configuration panel forces "hard" refresh of data. The collection of application windows (buttons) is cleaned and rebuilt from scratch and the background data are reloaded.
+The `Refresh` button in configuration panel forces "hard" refresh of data. The collection of application windows and pinned applications (buttons) are cleaned and rebuilt from scratch and the background data are reloaded.
 
 It's possible to add `AppSwitcherBar` to Windows Startup folder using the checkbox `Run on Win start`. This functionality can be disabled by settings (see the next chapter).
+
+When the auto-size is off, the buttons use the fixed size as defined in settings (`AppBarButtonWidth`, `AppBarButtonHeight`) and bar width/height is to be adjusted manually using the drag and drop thumb at the outer edge.
+When the auto-size switch is on, the `AppSwitcherBar` auto-size itself as well as the application window buttons. Buttons use the fixed height as defined in settings (`AppBarButtonHeight`), the width can vary - buttons can be make smaller up to ratio defined in settings (`AppBarButtonMinWidthRatio`) - default value is 50%.
+ - For vertical bar with single column, the full button size is used, when the bar has multiple columns, the minimal button width is used.
+ - Horizontal bar tries to accommodate as much buttons as possible in each row adjusting the size of buttons between the minimal and full width to fill the row.
+
+User settings are persisted to `appsettings.user.json` file in the application folder. The file contains the setting for dock position (edge), docked width and height and auto-size on/off switch. These values are used on the application start to keep the last used configuration.  
+
+Note: To reset the user settings, simply delete the file (make sure you delete the *appsettings.**user**.json* settings file, not the *appsettings.json* containing the full application settings).
 
 ## Application Settings ##
 Besides the runtime configuration described above, it's possible to adjust the application settings stored in `appsettings.json` file in the application folder.
@@ -64,14 +109,22 @@ Besides the runtime configuration described above, it's possible to adjust the a
     "AllowRunOnWindowsStartup": true,
 
     "AppBarDock": "Bottom",
-    "AppBarDockedWidth": 200,
-    "AppBarDockedHeight": 100,
-    "AppBarMinWidth": 100,
+    "AppBarAutoSize": true,
+    "AppBarDockedWidth": 160,
+    "AppBarDockedHeight": 50,
+    "AppBarMinWidth": 160,
     "AppBarMinHeight": 50,
 
     "AppBarResizeRedrawOnDrag": true,
 
     "AppBarButtonWidth": 150,
+    "AppBarButtonMinWidthRatio": 0.5,
+    "AppBarButtonHeight": 26,
+    "AppBarButtonMargin": 2,
+
+    "AllowAppBarButtonReorder": true,
+    "ShowPinnedApps": true,
+    "HideSingleWindowApps": false,
 
     "AppBarThumbnailWidth": 200,
     "AppBarThumbnailHeight": 120,
@@ -83,10 +136,12 @@ Besides the runtime configuration described above, it's possible to adjust the a
     "InvertWhiteIcons": true,
 
     "JumpListCategoryLimit": 10,
+    "JumpListUseTempFiles": false,
 
     "FeatureFlags": {
       "JumpList": true,
-      "RunOnWindowsStartup": true 
+      "RunOnWindowsStartup": true,
+      "AnonymizeWindows": true
     },
 
     "AppIds": {
@@ -110,13 +165,20 @@ Besides the runtime configuration described above, it's possible to adjust the a
 
 - `ShowInTaskbar` - Flag whether to display the `AppSwitcherBar` in the Taskbar (it automatically excludes itself from the list of windows in the bar regardless of this setting)
 - `AllowRunOnWindowsStartup` - Flag whether to give use the configuration option to set `AppSwitcherBar` to run on Windows startup
-- `AppBarDock` - Startup position of the application bar (Top, Left, Right, Bottom) 
+- `AppBarDock` - Startup position of the application bar (Top, Left, Right, Bottom)
+- `AppBarAutoSize` - Allow or block the auto-sizing the application bar and window buttons 
 - `AppBarDockedWidth` - The width of the application bar when positioned vertically
 - `AppBarDockedHeight` - The height of the application bar when positioned horizontally
 - `AppBarMinWidth` -  The minimal width of the application bar when positioned vertically
 - `AppBarMinHeight` - The minimal height of the application bar when positioned horizontally
 - `AppBarResizeRedrawOnDrag` - Flag whether to redraw (resize) the application bar when dragging the thumb. If set to `false`, the bar is only resized when the thumb is dropped
-- `AppBarButtonWidth` - The width of the button representing the application window
+- `AppBarButtonWidth` - The full width of the button representing the application window
+- `AppBarButtonMinWidthRatio` - The ratio specifying the minimal button width when autosized. For example `0.6` means that button can be made smaller up to 60% of full width (`AppBarButtonWidth`)
+- `AppBarButtonHeight` - The height of the button representing the application window
+- `AppBarButtonMargin` - The margin to be added to window buttons as a spacer between them
+- `AllowAppBarButtonReorder` - Flag whether to allow button drag and drop reorder
+- `ShowPinnedApps` - Flag whether to show buttons ("pins") for applications pinned to taskbar when there is no window for pinned application
+- `HideSingleWindowApps` - Flag whether to hide the applications (buttons) having only single window. When the pinned applications support is on and the application has a pin, it will be not be hiden even having a single window.
 - `AppBarThumbnailWidth` - The width of application window thumbnail
 - `AppBarThumbnailHeight` - The height of application window thumbnail
 - `RefreshWindowInfosIntervalMs` - The interval in milliseconds for refreshing the collection and status of the application windows 
@@ -124,9 +186,11 @@ Besides the runtime configuration described above, it's possible to adjust the a
 - `CheckForAppIdChange` - Flag whether `AppSwitcherBar` periodically checks windows for change of their Application ID that has an impact to grouping the buttons together. It's off by default as the runtime changes of Application ID are quite rare.
 - `InvertWhiteIcons` - `AppSwitcherBar` uses light WPF theme. When the host Windows are set to dark theme, some icons provided by applications are in shadows of white (different opacity to be exact) that might be hard to see on the light background. When this option is on, `AppSwitcherBar` tries to identify "all white" icons and invert the to black for better visual experience.
 - `JumpListCategoryLimit` - The maximum number of items in individual JumpList categories except `Tasks`.
+- `JumpListUseTempFiles` - Flag whether to extract the links (.lnk) from JumpLists to temporary files and read properties from them. Otherwise the in-memory processing is used.
 - `FeatureFlags` - Section used to configure (and allow/block) the experimental features or work in progress.
   - `JumpList` - Enable/Disable JumpList functionality.
   - `RunOnWindowsStartup` - Enable/Disable functionality manipulating the Windows startup link for `AppSwitcherBar`. Use `AllowRunOnWindowsStartup` setting to hide the configuration option, use the feature flag to use the dummy implementation. This is probably gonna be used during the development only
+  - `AnonymizeWindows` - Enable/Disable anonymization of window captions in buttons. This used when making the app screen shots
 - `AppIds` - AppIds or Application IDs are used for grouping the buttons together, but they are also used to identify the application within the system and use the information from list of installed applications to get some additional data (for example application icon) or to decide how to launch the application (desktop and Store applications are launched different way). Unfortunately, there is no simple and straight way how to obtain the AppId, so some "try and see" logic is used. For some cases it's just easier to define the AppIds for particular application directly in the configuration. `Explorer` should always be there as defined above.
 
 *Note: The application uses the standard [.NET Configuration system](https://docs.microsoft.com/en-us/dotnet/core/extensions/configuration), so it's also possible to set the configuration values using the command line parameters or environment values*
@@ -239,22 +303,60 @@ The custom destinations are stored in files containing the information about cat
 
 As the Compound File contains links serialized as OLE Streams, it can be simply read using `Ole32.OleLoadFromStream` into the COM object implementing `IShellLinkW`. Custom destinations serialize the links just as binaries, so I did a small trick to be able to reuse the functionality - a binary buffer is created containing the CLSID of `IShellLinkW` and then the content of link file itself. That's the way how OLE streams are often stored, so I can again use `OleLoadFromStream`.
 
-Once the `IShellLink` object is available, the basic information about the link can be retrieved using the methods of the interface. The links also implement `IPersistFile` interface used to temporary store the link to file and read it as `IShellItem2` to get the access to shell properties providing the additional information about link that are used by `AppSwitcherBar`.
+Once the `IShellLink` object is available, the basic information about the link can be retrieved using the methods of the interface.
+When the setting `JumpListUseTempFiles` is set, `IPersistFile` interface of link is used to temporary store the link to file and read it as `IShellItem2` to get the access to shell properties providing the additional information about link that are used by `AppSwitcherBar`.
+When the setting `JumpListUseTempFiles` is not set, `IPersistStream` interface of link is used to process the link in-memory. The link is stored to memory stream, read again to `CShellLink` COM class to get access to `IPropertyStore` to get the access to shell properties providing the additional information about link that are used by `AppSwitcherBar`.
+*Note: Although both methods should be identical, there are slight differences - for example in-memory processing provides thumbnails of images in icons. And it seems also a bit faster.*
 
-*Note: I didn't succeed with getting the `IShellItem2` interface without the need to physically store the file, read it and delete it. This is an area for improvement, as this way have quite significant performance impact.*   
+### Taskbar Pinned Applications ###
+Getting the information about applications pinned to taskbar seems to be a bit tricky. The simplest way is to get the links (`.lnk`) from `AppData\Roaming\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar`. Trying this method, I struggled with getting the order of pins. The list of pinned applications is also stored in registry value `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband\Favorites` - a binary value without documented format. As the information in registry value is apparently in the right order, I tried to find the name of the link file and then sorted the links (retrieved from the directory mentioned above) by the position of name within the binary registry value. 
+Unfortunatelly, this method doesn't work well for Store/UWP applications. In such case, there is no `.lnk` file created in quick launch folder, but the registry value I used to get the order of links, contains the information about the UWP applications. I tried to somehow extract the AppIds of the pinned Store apps together with the information about order of pins, but it I didn't find a reliable way but to do very slow one by one check against the list of installed applications. So I gave up using this method.
 
-## Additional Features/Ideas ##
+I found in interesting [article](https://geelaw.blog/entries/msedge-pins/) by Gee Law elaborating the native interface `IPinnedList3` and related COM class. As the interface is not documented and there are almost no other sources of information at the internet, I had to play&fail a bit, but finally made it work as needed.
+
+Simplified algorithm follows, the real implementation is in `JumpListService.GetPinnedApplications`.
+
+```csharp
+//get the COM class type for {90aa3a4e-1cba-4233-b8bb-535773d48449}
+var objType = Type.GetTypeFromCLSID(new Guid(Win32Consts.CLSID_TaskbanPin), false);
+//create an instance of COM class
+var obj = Activator.CreateInstance(objType);
+//get the IPinnedList3 interface
+var pinnedList=obj as IPinnedList3;
+//get the enumerator
+var hrs = pinnedList.EnumObjects(out var iel);
+do
+{
+   hrs = iel.Next(1, out var pidl, out _);
+   if (!hrs.IsS_OK) break;
+
+   hrs = Shell32.SHCreateItemFromIDList(pidl, iShellItem2Guid, out var shellItem);
+   if (!hrs.IsS_OK || shellItem == null) break;
+
+   //get the information from shell item representing either 
+   //link to desktop app or directly Store/UWP app
+   ...
+
+   Marshal.FreeCoTaskMem(pidl);
+} while (hrs.IsS_OK);
+```
+
+As mentioned above, the interface is not public and documented (and it's versioned as well), so it can change with some Windows update. Use the setting `ShowPinnedApps` to switch the functionality off in case of issues.
+
+## Additional (future) Feature Ideas ##
   - Optional auto hide functionality of appbar
   - Search and switch to application by title (from enumerated windows)
   - Search and launch application by name (from installed applications)
-  - Drag and drop to reorder groups or window buttons within the group
-  - Support for Light and Dark system theme
+  - Support for system light and dark schemes
 
 ## Credits & Sources Used ##
  - [Taskbar Extensions documentation](https://docs.microsoft.com/en-us/windows/win32/shell/taskbar-extensions)
  - [Application Desktop Toolbars (appbars) documentation](https://docs.microsoft.com/en-us/windows/win32/shell/application-desktop-toolbars)
  - [Desktop Window Manager (DWM) thumbnail documentation](https://docs.microsoft.com/en-us/windows/win32/dwm/thumbnail-ovw)
- - A lot of Windows API is being used, so [Windows API documentation](https://docs.microsoft.com/en-us/windows/win32/apiindex/windows-api-list) comes handy as well as [PInvoke.net](https://www.pinvoke.net/)
+ - A lot of Windows API is being used, so [Windows API documentation](https://docs.microsoft.com/en-us/windows/win32/apiindex/windows-api-list) comes handy as well as
+   - [PInvoke.net](https://www.pinvoke.net/) 
+   - [James Forshaw's OleViewDotNet](https://github.com/tyranid/oleviewdotnet)
+   - [Geoff Chappell's Win API analysis](https://www.geoffchappell.com/index.htm)
  - Windows API Code Pack 1.1 is long time depreciated but still a good source of "how to". The original code is not available anymore, but a "mirror" can be found for example [here](https://github.com/aybe/Windows-API-Code-Pack-1.1) 
  - [MahApps.Metro IconPacks](https://github.com/MahApps/MahApps.Metro.IconPacks) are good source of icons for WPF applications
  - WPF implementation of AppBar is based on work of [Mitch Gaffigan](https://github.com/mgaffigan/WpfAppBar)

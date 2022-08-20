@@ -91,7 +91,12 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeStructs
         /// Is HRESULT success (>=0)?
         /// </summary>
         public bool IsSuccess => (int)value >= 0;
-        
+
+        /// <summary>
+        /// Is HRESULT absolue success S_OK (==0)?
+        /// </summary>
+        public bool IsS_OK => (int)value == 0;
+
         /// <summary>
         /// CTOR
         /// </summary>

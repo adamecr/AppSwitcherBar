@@ -110,6 +110,8 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public IAppSettings Settings { get; }
 
 
+
+
         /// <summary>
         /// Flag whether the option to set Run On Windows Startup is available
         /// </summary>
@@ -118,7 +120,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <summary>
         /// Flag whether the AppSwitcherBar is set to run on Windows startup
         /// </summary>
-        public bool runOnWinStartupSet;
+        private bool runOnWinStartupSet;
         /// <summary>
         /// Flag whether the AppSwitcherBar is set to run on Windows startup
         /// </summary>
@@ -152,7 +154,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <summary>
         /// Application window buttons group manager
         /// </summary>
-        public WndButtonManager ButtonManager { get; } = new();
+        public AppButtonManager ButtonManager { get; } 
 
         /// <summary>
         /// Command requesting an "ad-hoc" refresh of the list of application windows (no param used)
@@ -185,6 +187,11 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public ICommand ToggleRunOnStartupCommand { get; }
 
         /// <summary>
+        /// Command requesting to launch pinned application
+        /// </summary>
+        public ICommand LaunchPinnedAppCommand { get; }
+
+        /// <summary>
         /// JumpList service to be used
         /// </summary>
         private readonly IJumpListService jumpListService;
@@ -194,6 +201,18 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// </summary>
         private readonly IStartupService startupService;
 
+        /// <summary>
+        /// Name of the Feature Flag for windows anonymization
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        private const string FF_AnonymizeWindows = "AnonymizeWindows";
+        
+        /// <summary>
+        /// Map used for simple anonymization
+        /// </summary>
+        /// 
+        private readonly Dictionary<char, char> anonymizeMap = new();
+        
         /// <summary>
         /// Internal CTOR
         /// Directly used by <see cref="ViewModelLocator"/> when creating a design time instance.
@@ -211,12 +230,15 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
             Settings = settings;
             AllMonitors = Monitor.GetAllMonitors();
+            ButtonManager = new AppButtonManager(Settings);
+
             RefreshWindowCollectionCommand = new RelayCommand(RefreshAllWindowsCollection);
             ToggleApplicationWindowCommand = new RelayCommand(ToggleApplicationWindow);
             ShowThumbnailCommand = new RelayCommand(ShowThumbnail);
             HideThumbnailCommand = new RelayCommand(HideThumbnail);
             BuildContextMenuCommand = new RelayCommand(BuildContextMenu);
             ToggleRunOnStartupCommand = new RelayCommand(ToggleRunOnWinStartup);
+            LaunchPinnedAppCommand = new RelayCommand(LaunchPinnedApp);
 
             runOnWinStartupSet = startupService.HasAppStartupLink();
 
@@ -235,6 +257,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             var explorerExecutable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe").ToLowerInvariant();
             knownAppIds[explorerExecutable] = "Microsoft.Windows.Explorer";
 
+            if (settings.FeatureFlag(FF_AnonymizeWindows, false))
+            {
+                InitAnonymizeMap();
+            }
 
             timer = new DispatcherTimer(DispatcherPriority.Render)
             {
@@ -274,6 +300,58 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             mainWindowHwnd = mainWndHwnd;
 
             timer.Start();
+
+
+        }
+
+        /// <summary>
+        /// Initialize character map for simple anonymization
+        /// </summary>
+        private void InitAnonymizeMap()
+        {
+            var rnd = new Random(DateTime.Now.GetHashCode());
+            for (var c = 'a'; c <= 'z'; c++)
+            {
+                anonymizeMap[c] = (char)('a' + rnd.Next(26));
+            }
+            for (var c = 'A'; c <= 'Z'; c++)
+            {
+                anonymizeMap[c] = (char)('A' + rnd.Next(26));
+            }
+            for (var c = '0'; c <= '9'; c++)
+            {
+                anonymizeMap[c] = (char)('0' + rnd.Next(26));
+            }
+            foreach (var c in " -.:/")
+            {
+                anonymizeMap[c] = (char)('a' + rnd.Next(26));
+            }
+        }
+
+        /// <summary>
+        /// Simple anonymize given string
+        /// </summary>
+        /// <param name="s">string to anonymize</param>
+        /// <param name="saltInt">anonymization salt</param>
+        /// <returns>anonymized string</returns>
+        private string? Anonymize(string? s,int saltInt)
+        {
+            if (s == null) return null;
+            var salt = saltInt.ToString();
+            while (salt.Length < s.Length) 
+            {
+                salt += salt;
+            }
+
+            var retVal=string.Empty;
+            for (var i=0;i<s.Length;i++)
+            {
+                var c=s[i];
+                var cs = (char)(c + salt[i]);
+                retVal += anonymizeMap.TryGetValue(cs, out var a) ? a : anonymizeMap.TryGetValue(c, out a) ? a : c;
+            }
+
+            return retVal;
         }
 
         /// <summary>
@@ -283,7 +361,6 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         {
             var timestampStart = DateTime.Now;
             var timestampEndInstalledApps = DateTime.MinValue;
-            var timestampEndKnownFolders = DateTime.MinValue;
 
             bool isSuccess;
             string resultMsg;
@@ -301,8 +378,8 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
                          var appName = item.GetDisplayName();
                          var propertyStore = item.GetPropertyStore();
-
-                         var shellProperties = propertyStore?.GetProperties() ?? new Properties(); //empty object
+                         
+                         var shellProperties = propertyStore?.GetProperties() ?? new ShellPropertiesSubset(); //empty object
                          var appUserModelId = shellProperties.ApplicationUserModelId;
                          var iconSource = Shell.GetShellItemBitmapSource(item, 32);
                          var lnk = propertyStore?.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath);
@@ -314,11 +391,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
                 timestampEndInstalledApps = DateTime.Now;
 
-                //retrieve known folders
-                var dataKnownFolders = Shell.GetKnownFolders();
-                timestampEndKnownFolders = DateTime.Now;
-
-                data = new BackgroundData(dataInstalledApps.ToArray(), dataKnownFolders);
+                data = new BackgroundData(dataInstalledApps.ToArray());
                 resultMsg = "OK";
                 isSuccess = true;
             }
@@ -328,14 +401,15 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 resultMsg = $"{ex.GetType().Name}: {ex.Message}";
             }
 
+            var timestampEndTotal = DateTime.Now;
             var durationInstalledApps = (timestampEndInstalledApps - timestampStart).TotalMilliseconds;
-            var durationKnownFolders = (timestampEndKnownFolders - timestampEndInstalledApps).TotalMilliseconds;
-            var durationTotal = durationInstalledApps + durationKnownFolders;
+            var durationTotal = (timestampEndTotal - timestampStart).TotalMilliseconds;
 
             LogBackgroundDataInitTelemetry(
                 isSuccess ? LogLevel.Information : LogLevel.Error,
                 DateTime.Now, isSuccess, resultMsg,
-                (int)durationTotal, (int)durationInstalledApps, (int)durationKnownFolders);
+                (int)durationTotal, (int)durationInstalledApps);
+
 
             return data;
         }
@@ -358,15 +432,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                     }
                     installedApplications.Add(installedApplication);
                 }
-
-                knownFolders = data.KnownFolders;
             }
-
             BackgroundDataRetrieved = true;
         }
-
-
-
+        
         /// <summary>
         /// Pulls the information about available application windows and updates <see cref="ButtonManager"/> window collection.
         /// </summary>
@@ -383,17 +452,26 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 isFirstRun = false;
             }
 
-            //begin update of windows collection
-            ButtonManager.BeginUpdate(isHardRefresh);
-
             if (isHardRefresh)
             {
+                //get known folders
+                knownFolders = Shell.GetKnownFolders();
+                //get information about pinned applications
+                var pinnedApplications = jumpListService.GetPinnedApplications(knownFolders);
+
+                ButtonManager.BeginHardRefresh(pinnedApplications);
+
                 //Refresh also init data
                 if (!backgroundInitWorker.IsBusy)
                 {
                     BackgroundDataRetrieved = false;
                     backgroundInitWorker.RunWorkerAsync();
                 }
+            }
+            else
+            {
+                //begin update of windows collection
+                ButtonManager.BeginUpdate();
             }
 
             //Retrieve the current foreground window
@@ -406,6 +484,20 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 hwnd => ButtonManager[hwnd],
                 (hwnd, wnd, caption, threadId, processId, ptrProcess) =>
                 {
+                    //caption anonymization
+                    if (Settings.FeatureFlag<bool>(FF_AnonymizeWindows))
+                    {
+                        var appName =
+                            installedApplications.GetInstalledApplicationFromAppId(wnd?.AppId ?? string.Empty)?.Name ??
+                            installedApplications.GetInstalledApplicationFromExecutable(wnd?.Executable ?? string.Empty)?.Name;
+
+                        if (caption != appName)
+                        {
+                            caption = (string.IsNullOrEmpty(appName) ? "" : $"{appName} - ") + Anonymize(caption,hwnd.ToInt32());
+                        }
+                    }
+                    
+
                     //Check whether it's a "new" application window or a one already existing in the ButtonManager
                     if (wnd == null)
                     {
@@ -498,6 +590,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 }); //enum visible windows
 
             ButtonManager.EndUpdate();
+
         }
 
         /// <summary>
@@ -519,12 +612,12 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             {
                 //it's a foreground window - minimize it and return
                 WndAndApp.MinimizeWindow(hWndIntPtr);
-                LogMinimizeApp(hWndIntPtr, wnd.title);
+                LogMinimizeApp(hWndIntPtr, wnd.Title);
                 return;
             }
 
             var wasMinimized = WndAndApp.ActivateWindow(hWndIntPtr);
-            LogSwitchApp(hWndIntPtr, wnd.title, wasMinimized);
+            LogSwitchApp(hWndIntPtr, wnd.Title, wasMinimized);
 
             //refresh the window list
             RefreshAllWindowsCollection(false);
@@ -572,32 +665,82 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         }
 
         /// <summary>
+        /// Launches the pinned application
+        /// Parameter <paramref name="param"/> must be <see cref="PinnedAppInfo"/> object
+        /// </summary>
+        /// <param name="param"><see cref="PinnedAppInfo"/> object with reference to <see cref="AppButton"/> and <see cref="WndInfo"/></param>
+        /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="PinnedAppInfo"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
+
+        private void LaunchPinnedApp(object? param)
+        {
+            if (param is not PinnedAppInfo cmdParams)
+            {
+                LogWrongCommandParameter(nameof(PinnedAppInfo));
+                throw new ArgumentException($"Command parameter must be {nameof(PinnedAppInfo)}", nameof(param));
+            }
+
+            LaunchPinnedApp(cmdParams);
+        }
+
+        /// <summary>
+        /// Launches the pinned application
+        /// </summary>
+        ///<param name="pinnedApp">Pinned application info</param>
+        private void LaunchPinnedApp(PinnedAppInfo pinnedApp)
+        {
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+            if (pinnedApp == null) return; //can't do anyting
+
+            if (pinnedApp.PinnedAppType == PinnedAppInfo.PinnedAppTypeEnum.Package)
+            {
+                Package.ActivateApplication(pinnedApp.AppId, null, out _);
+            }
+            else
+            {
+                if (pinnedApp.LinkFile == null || !File.Exists(pinnedApp.LinkFile)) return; //can't do anything
+                //launch link
+                var startInfo = new ProcessStartInfo(pinnedApp.LinkFile)
+                {
+                    UseShellExecute = true
+                };
+                Process.Start(startInfo);
+            }
+        }
+
+        /// <summary>
         /// Builds the context menu for application window button
         /// Parameter <paramref name="param"/> must be <see cref="BuildContextMenuCommandParams"/> object
         /// </summary>
-        /// <param name="param"><see cref="BuildContextMenuCommandParams"/> object with reference to <see cref="AppWindowButton"/> and <see cref="WndInfo"/></param>
+        /// <param name="param"><see cref="BuildContextMenuCommandParams"/> object with reference to <see cref="AppButton"/> and <see cref="ButtonInfo"/></param>
         /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="BuildContextMenuCommandParams"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
         private void BuildContextMenu(object? param)
         {
             if (param is not BuildContextMenuCommandParams cmdParams)
             {
                 LogWrongCommandParameter(nameof(BuildContextMenuCommandParams));
-                throw new ArgumentException($"Command parameter must be {nameof(BuildContextMenuCommandParams)}", nameof(param));
+                throw new ArgumentException($"Command parameter must be {nameof(BuildContextMenuCommandParams)}",
+                    nameof(param));
             }
 
             MenuItem menuItem;
             var menu = new ContextMenu();
 
-            string? appName = null;
-            var wnd = cmdParams.WindowInfo;
-            var appId = wnd.AppId;
+            var buttonInfo = cmdParams.ButtonInfo;
+            WndInfo? wndInfo = null;
+            if (buttonInfo is WndInfo wi)
+            {
+                wndInfo = wi;
+            }
+
+            var isWindow = wndInfo != null;
+
+            var appId = buttonInfo.AppId;
 
             if (appId != null)
             {
-                appName = installedApplications.GetInstalledApplicationFromAppId(appId)?.Name;
-
                 //appId can be an executable full path, ensure that known folders are transformed to their GUIDs
-                foreach (var knownFolder in knownFolders)
+                appId = Shell.ReplaceKnownFolderWithGuid(appId);
+                /*foreach (var knownFolder in knownFolders)
                 {
                     if (appId == knownFolder.String)
                     {
@@ -611,12 +754,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         appId = knownFolder.GuidStr + appId[knownFolder.String.Length..];
                         break;
                     }
-                }
-
-                appName ??= installedApplications.GetInstalledApplicationFromAppId(appId)?.Name; //try again with transformed appId if needed
+                }*/
 
                 //JumpList into the context menu
-                var jumplistItems = jumpListService.GetJumpListItems(appId, installedApplications);
+                var jumplistItems = jumpListService.GetJumpListItems(appId!, installedApplications);
                 if (jumplistItems.Length > 0)
                 {
                     string? lastCategory = null;
@@ -641,6 +782,13 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         {
                             Header = linkInfo.Name
                         };
+                        
+                        //caption anonymization
+                        if (Settings.FeatureFlag<bool>(FF_AnonymizeWindows) && linkInfo.Category!="Tasks")
+                        {
+                            menuItem.Header = Anonymize(linkInfo.Name,linkInfo.GetHashCode());
+                        }
+
                         if (linkInfo.Icon != null)
                         {
                             menuItem.Icon = new Image
@@ -656,8 +804,8 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                             menuItem.Icon = new Image
                             {
                                 Source = Settings.InvertWhiteIcons
-                                    ? Resource.InvertBitmapIfWhiteOnly(wnd.BitmapSource)
-                                    : wnd.BitmapSource
+                                    ? Resource.InvertBitmapIfWhiteOnly(buttonInfo.BitmapSource)
+                                    : buttonInfo.BitmapSource
                             };
                         }
 
@@ -687,86 +835,29 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         };
                         menu.Items.Add(menuItem);
                     }
+
                     menu.Items.Add(new Separator());
                 }
             }
 
-            //Start new instance menu item
-            if (File.Exists(wnd.Executable))
-            {
-                appName ??= installedApplications.GetInstalledApplicationFromExecutable(wnd.Executable)?.Name ??
-                            FileVersionInfo.GetVersionInfo(wnd.Executable).FileDescription ??
-                            Path.GetFileName(wnd.Executable);
 
+            BuildContextMenuItemLaunchNewInstance(isWindow, buttonInfo, menu);
+
+            if (isWindow)
+            {
+                //close window menu item
                 menuItem = new MenuItem
                 {
-                    Header = appName,
-                    Icon = new Image { Source = Settings.InvertWhiteIcons ? Resource.InvertBitmapIfWhiteOnly(wnd.BitmapSource) : wnd.BitmapSource }
-                };
-                menuItem.Click += (_, _) =>
-                {
-                    if (wnd.Executable.ToLowerInvariant().EndsWith("\\explorer.exe"))
+                    Header = "Close window",
+                    Icon = new PackIconBootstrapIcons
                     {
-                        //explorer and the "special" folders like control panel
-                        try
-                        {
-                            Process.Start(new ProcessStartInfo("explorer")
-                            {
-                                Arguments = wnd.AppId != null ? $"shell:appsFolder\\{wnd.AppId}" : null,
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            LogCantStartApp(appName, ex);
-                        }
-                    }
-                    else
-                    {
-                        var started = false;
-                        if (!wnd.Executable.ToLowerInvariant().EndsWith("\\applicationframehost.exe"))
-                        {
-                            try
-                            {
-                                Process.Start(wnd.Executable);
-                                started = true;
-                            }
-                            catch (Exception ex)
-                            {
-                                LogCantStartApp(appName, ex);
-                            }
-                        }
-
-                        if (started || wnd.AppId == null) return;
-
-                        //maybe store/UWP app
-                        try
-                        {
-                            Package.ActivateApplication(wnd.AppId, null, out _);
-                        }
-                        catch (Exception ex)
-                        {
-                            LogCantStartApp(appName, ex);
-                        }
+                        Kind = PackIconBootstrapIconsKind.X,
+                        Foreground = Brushes.Red
                     }
                 };
+                menuItem.Click += (_, _) => { WndAndApp.CloseWindow(wndInfo!.Hwnd); };
                 menu.Items.Add(menuItem);
             }
-
-            //close window menu item
-            menuItem = new MenuItem
-            {
-                Header = "Close window",
-                Icon = new PackIconBootstrapIcons
-                {
-                    Kind = PackIconBootstrapIconsKind.X,
-                    Foreground = Brushes.Red
-                }
-            };
-            menuItem.Click += (_, _) =>
-            {
-                WndAndApp.CloseWindow(wnd.Hwnd);
-            };
-            menu.Items.Add(menuItem);
 
             menu.Items.Add(new Separator());
 
@@ -787,6 +878,105 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
             cmdParams.Button.ContextMenu = menu;
         }
+
+        /// <summary>
+        /// Builds the context menu item for launching a new instance of application
+        /// </summary>
+        /// <param name="isWindow">Flag whether the context menu is for window button</param>
+        /// <param name="buttonInfo">Information about application window or pinned app </param>
+        /// <param name="menu">Context menu</param>
+        private void BuildContextMenuItemLaunchNewInstance(bool isWindow, ButtonInfo buttonInfo, ContextMenu menu)
+        {
+            if (isWindow)
+            {
+                //Start new instance menu item (window)
+                if (!File.Exists(buttonInfo.Executable)) return;
+
+                var appName =
+                    installedApplications.GetInstalledApplicationFromAppId(buttonInfo.AppId ?? string.Empty)?.Name ??
+                    installedApplications.GetInstalledApplicationFromExecutable(buttonInfo.Executable)?.Name ??
+                    FileVersionInfo.GetVersionInfo(buttonInfo.Executable).FileDescription ??
+                    Path.GetFileName(buttonInfo.Executable);
+
+                var menuItem = new MenuItem
+                {
+                    Header = appName,
+                    Icon = new Image
+                    {
+                        Source = Settings.InvertWhiteIcons
+                            ? Resource.InvertBitmapIfWhiteOnly(buttonInfo.BitmapSource)
+                            : buttonInfo.BitmapSource
+                    }
+                };
+                menuItem.Click += (_, _) =>
+                {
+                    if (buttonInfo.Executable.ToLowerInvariant().EndsWith("\\explorer.exe"))
+                    {
+                        //explorer and the "special" folders like control panel
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo("explorer")
+                            {
+                                Arguments = buttonInfo.AppId != null
+                                    ? $"shell:appsFolder\\{buttonInfo.AppId}"
+                                    : null,
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            LogCantStartApp(appName, ex);
+                        }
+                    }
+                    else
+                    {
+                        var started = false;
+                        if (!buttonInfo.Executable.ToLowerInvariant().EndsWith("\\applicationframehost.exe"))
+                        {
+                            try
+                            {
+                                Process.Start(buttonInfo.Executable);
+                                started = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                LogCantStartApp(appName, ex);
+                            }
+                        }
+
+                        if (started || buttonInfo.AppId == null) return;
+
+                        //maybe store/UWP app
+                        try
+                        {
+                            Package.ActivateApplication(buttonInfo.AppId, null, out _);
+                        }
+                        catch (Exception ex)
+                        {
+                            LogCantStartApp(appName, ex);
+                        }
+                    }
+                };
+                menu.Items.Add(menuItem);
+            }
+            else
+            {
+                //Start new instance menu item (pinned app)
+                if (buttonInfo is not PinnedAppInfo pinnedAppInfo) return;
+                var menuItem = new MenuItem
+                {
+                    Header = pinnedAppInfo.Title,
+                    Icon = new Image
+                    {
+                        Source = Settings.InvertWhiteIcons
+                            ? Resource.InvertBitmapIfWhiteOnly(pinnedAppInfo.BitmapSource)
+                            : pinnedAppInfo.BitmapSource
+                    }
+                };
+                menuItem.Click += (_, _) => { LaunchPinnedApp(pinnedAppInfo); };
+                menu.Items.Add(menuItem);
+            }
+        }
+
 
         /// <summary>
         /// Toggles Run On Windows startup option.

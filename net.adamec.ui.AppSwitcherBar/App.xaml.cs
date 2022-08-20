@@ -13,9 +13,10 @@ namespace net.adamec.ui.AppSwitcherBar
     /// <summary>
     /// AppSwitcherBar application
     /// </summary>
+    // ReSharper disable once RedundantExtendsListEntry
     public partial class App : Application
     {
-      
+     
 #pragma warning disable CS8618
         // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         /// <summary>
@@ -38,7 +39,11 @@ namespace net.adamec.ui.AppSwitcherBar
             base.OnStartup(e);
 
             host = Host
-                .CreateDefaultBuilder()
+                .CreateDefaultBuilder(e.Args)
+                .ConfigureAppConfiguration(config =>
+                {
+                    config.AddJsonFile(UserSettings.UserSettingsFile, optional: true);
+                })
                 .ConfigureServices((context, services) =>
                 {
                     ConfigureServices(context.Configuration, services);
