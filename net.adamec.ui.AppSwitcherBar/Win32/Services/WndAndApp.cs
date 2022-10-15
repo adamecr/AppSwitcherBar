@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using net.adamec.ui.AppSwitcherBar.Dto;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeClasses;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
 using static net.adamec.ui.AppSwitcherBar.Win32.NativeConstants.Win32Consts;
 // ReSharper disable CommentTypo
@@ -46,6 +49,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
         /// <summary>
         /// Information about window Process ID
         /// </summary>
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
         private class PidInfos
         {
             /// <summary>
@@ -89,7 +93,8 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
             _ = User32.EnumWindows((hwnd, _) =>
                  {
                      //Filter windows - only the top-level application windows except "itself" 
-                     var isCloaked = (DwmApi.DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out var isCloakedAttribute, sizeof(bool)) == S_OK) && isCloakedAttribute;
+                     int isCloakedAttribute = -1;
+                     var isCloaked = (DwmApi.DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, ref isCloakedAttribute, sizeof(int)) == S_OK) && isCloakedAttribute > 0;
 
                      var wndStyle = (ulong)User32.GetWindowLongPtr(hwnd, GWL_STYLE).ToInt64();
                      var wndStyleEx = (ulong)User32.GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
@@ -101,7 +106,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
                                      (wndStyle & WS_CAPTION) == WS_CAPTION &&
                                      !isCloaked &&
                                      (
-                                         (wndStyle & WS_EX_APPWINDOW) == WS_EX_APPWINDOW || User32.GetWindow(hwnd, GW_OWNER) == IntPtr.Zero
+                                         (wndStyleEx & WS_EX_APPWINDOW) == WS_EX_APPWINDOW || User32.GetWindow(hwnd, GW_OWNER) == IntPtr.Zero
                                      );
 
 
@@ -222,6 +227,35 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
         }
 
         /// <summary>
+        /// Gets the application user model ID for the specified window.
+        /// Uses the undocumented win32 api, so it might change or not work as expected
+        /// </summary>
+        /// <param name="hwnd">A handle to the window (HWND).</param>
+        /// <returns>Application user mode ID when available for given <paramref name="hwnd"/> or null</returns>
+        public static string? GetWindowApplicationUserModelId(IntPtr hwnd)
+        {
+            IApplicationResolver? appResolver = null;
+            try
+            {
+                // ReSharper disable once SuspiciousTypeConversion.Global
+                appResolver = (IApplicationResolver)new CApplicationResolver();
+                var hr = appResolver.GetAppIDForWindow(hwnd, out var appId, out _, out _, out _);
+                return hr.IsSuccess && !string.IsNullOrEmpty(appId)? appId : null;
+            }
+            catch (Exception)
+            {
+                return null; //just return null
+            }
+            finally
+            {
+                if (appResolver != null && Marshal.IsComObject(appResolver))
+                {
+                    Marshal.ReleaseComObject(appResolver); 
+                }
+            }
+        }
+
+        /// <summary>
         /// Get the icon of window with given <paramref name="hwnd"/>
         /// </summary>
         /// <param name="hwnd">HWND of the window</param>
@@ -251,9 +285,16 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
             //Got the icon?
             if (hiconPtr == IntPtr.Zero) return null;
 
-            //Transform the icon into the bitmap presentable in WPF UI
-            var bitmapSource = Imaging.CreateBitmapSourceFromHIcon(hiconPtr, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            return bitmapSource;
+            try
+            {
+                //Transform the icon into the bitmap presentable in WPF UI
+                var bitmapSource = Imaging.CreateBitmapSourceFromHIcon(hiconPtr, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                return bitmapSource;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
 
         }
 

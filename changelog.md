@@ -3,6 +3,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased ##
+
+## [1.2.1] - 2022-10-15 ##
+### Added ###
+- Logging of unhandled exceptions, so it can be possible to check in EventLog the details when the application crash
+- Experimental using the undocumented win32 api to get the AppId (under featture flag `UseApplicationResolver`)
+
+### Fixed ###
+- Corrections in the "visible windows" filter
+- The periodical check and update of windows (buttons) is skipped when the refresh is still in progress (caused the application crash)
+- Corrections to JumpList parsing - "early" recognize the issues with the structure and soft-break.
+- Corrections to JumpList parsing - use known AppIds from settings when can't get the appId from link. Added Windows Terminal app to settings know app ids.
+- Corrections to JumpList parsing - the "known category" type of record in custom destinations is just a "flag" not a list of links
+- Some corrections in the documentation
+- Exception handling in `WndAndApp.GetWindowIcon` when calling `Imaging.CreateBitmapSourceFromHIcon`
+
+
 ## [1.2.0] - 2022-08-20 ##
 ### Added ###
 - **Application bar and application window buttons auto-size support**
@@ -41,6 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added ###
 - Initial application release
 
+[1.2.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/adamecr/AppSwitcherBar/releases/tag/v1.0.0

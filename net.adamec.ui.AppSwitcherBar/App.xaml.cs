@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using net.adamec.ui.AppSwitcherBar.Config;
 using net.adamec.ui.AppSwitcherBar.ViewModel;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
@@ -16,7 +18,7 @@ namespace net.adamec.ui.AppSwitcherBar
     // ReSharper disable once RedundantExtendsListEntry
     public partial class App : Application
     {
-     
+
 #pragma warning disable CS8618
         // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         /// <summary>
@@ -29,6 +31,11 @@ namespace net.adamec.ui.AppSwitcherBar
         /// Application host
         /// </summary>
         private IHost? host;
+
+        /// <summary>
+        /// Application logger
+        /// </summary>
+        private ILogger? logger;
 
         /// <summary>
         /// Application startup logic - configure, build and start the host
@@ -58,11 +65,31 @@ namespace net.adamec.ui.AppSwitcherBar
 
             await host.StartAsync();
 
+            //Log unhandled exceptions, so the EventLog can be checked when the app crash
+            logger = host.Services.GetService<ILogger<App>>();
+            AppDomain.CurrentDomain.UnhandledException += (_, exceptionArgs) =>
+            {
+                if (exceptionArgs.ExceptionObject is Exception exception) LogUnhandledException(exception);
+            };
+            Dispatcher.UnhandledException +=(_, exceptionArgs) => LogUnhandledException(exceptionArgs.Exception);
+            Current.DispatcherUnhandledException += (_, exceptionArgs) => LogUnhandledException(exceptionArgs.Exception);
+            TaskScheduler.UnobservedTaskException += (_, exceptionArgs) => LogUnhandledException(exceptionArgs.Exception);
+
             var mainWindow = host.Services.GetRequiredService<MainWindow>();
             mainWindow.Show();
-
-
+            
         }
+
+        /// <summary>
+        /// Logs the unhandled exception before the app get's closed.
+        /// With default settings, the log item should be available in EventLog
+        /// </summary>
+        /// <param name="exception">Exception to log</param>
+        private void LogUnhandledException(Exception exception)
+        {
+            logger?.LogCritical(exception, "Unhandled exception: {Message}", exception.Message);
+        }
+
 
         /// <summary>
         /// Application exit logic - stop the host

@@ -192,6 +192,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         internal const string CLSID_TaskbanPin = "90aa3a4e-1cba-4233-b8bb-535773d48449";
         internal const string CLSID_StartMenuPin = "A2A9545D-A0C2-42B4-9708-A0B2BADD77C8";
         internal const string CLSID_KnownFolderManager = "4df0c730-df9d-4ae3-9153-aa6b82e9795a";
+        internal const string CLSID_ApplicationResolver = "660B90C8-73A9-4B58-8CAE-355B7F55341B";
 
         //interface IDs
         internal const string IID_IPropertyStore = "886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99";

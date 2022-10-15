@@ -141,12 +141,14 @@ Besides the runtime configuration described above, it's possible to adjust the a
     "FeatureFlags": {
       "JumpList": true,
       "RunOnWindowsStartup": true,
-      "AnonymizeWindows": true
+      "AnonymizeWindows": true,
+      "UseApplicationResolver": true
     },
 
     "AppIds": {
       "%windir%/explorer.exe": "Microsoft.Windows.Explorer",
-      "%LOCALAPPDATA%\\Microsoft\\Teams\\current\\Teams.exe": "com.squirrel.Teams.Teams"
+      "%LOCALAPPDATA%\\Microsoft\\Teams\\current\\Teams.exe": "com.squirrel.Teams.Teams",
+      "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\Microsoft.WindowsTerminal_8wekyb3d8bbwe\\wt.exe": "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
     } 
   },
 
@@ -190,7 +192,8 @@ Besides the runtime configuration described above, it's possible to adjust the a
 - `FeatureFlags` - Section used to configure (and allow/block) the experimental features or work in progress.
   - `JumpList` - Enable/Disable JumpList functionality.
   - `RunOnWindowsStartup` - Enable/Disable functionality manipulating the Windows startup link for `AppSwitcherBar`. Use `AllowRunOnWindowsStartup` setting to hide the configuration option, use the feature flag to use the dummy implementation. This is probably gonna be used during the development only
-  - `AnonymizeWindows` - Enable/Disable anonymization of window captions in buttons. This used when making the app screen shots
+  - `AnonymizeWindows` - Enable/Disable anonymization of window captions in buttons. This used when making the app screen shots 
+  - `UseApplicationResolver` - Enable/Disable using the undocumented win32 api to get the AppId
 - `AppIds` - AppIds or Application IDs are used for grouping the buttons together, but they are also used to identify the application within the system and use the information from list of installed applications to get some additional data (for example application icon) or to decide how to launch the application (desktop and Store applications are launched different way). Unfortunately, there is no simple and straight way how to obtain the AppId, so some "try and see" logic is used. For some cases it's just easier to define the AppIds for particular application directly in the configuration. `Explorer` should always be there as defined above.
 
 *Note: The application uses the standard [.NET Configuration system](https://docs.microsoft.com/en-us/dotnet/core/extensions/configuration), so it's also possible to set the configuration values using the command line parameters or environment values*
@@ -301,12 +304,12 @@ The other streams with numbered names represent individual items that are simply
 
 The custom destinations are stored in files containing the information about categories (recent/frequent, tasks, custom,...) and containing items. Although the file format is not documented, it was quite easy to understand (see `JumpListService.ParseCustomDestinations` method for details) and it will also provide the serialized link files.
 
-As the Compound File contains links serialized as OLE Streams, it can be simply read using `Ole32.OleLoadFromStream` into the COM object implementing `IShellLinkW`. Custom destinations serialize the links just as binaries, so I did a small trick to be able to reuse the functionality - a binary buffer is created containing the CLSID of `IShellLinkW` and then the content of link file itself. That's the way how OLE streams are often stored, so I can again use `OleLoadFromStream`.
+As the custom destinations contains links serialized as OLE Streams, it can be simply read either using `Ole32.OleLoadFromStream` into the COM object implementing `IShellLinkW`. Automatic destinations serialize the links just as binaries into the Compound file, so I did a small trick to be able to reuse the functionality - a binary buffer is created containing the CLSID of `IShellLinkW` and then the content of link file itself. That's the way how OLE streams are often stored, so I can again use `OleLoadFromStream`.
 
 Once the `IShellLink` object is available, the basic information about the link can be retrieved using the methods of the interface.
 When the setting `JumpListUseTempFiles` is set, `IPersistFile` interface of link is used to temporary store the link to file and read it as `IShellItem2` to get the access to shell properties providing the additional information about link that are used by `AppSwitcherBar`.
-When the setting `JumpListUseTempFiles` is not set, `IPersistStream` interface of link is used to process the link in-memory. The link is stored to memory stream, read again to `CShellLink` COM class to get access to `IPropertyStore` to get the access to shell properties providing the additional information about link that are used by `AppSwitcherBar`.
-*Note: Although both methods should be identical, there are slight differences - for example in-memory processing provides thumbnails of images in icons. And it seems also a bit faster.*
+When the setting `JumpListUseTempFiles` is not set, `IPropertyStore` interface of link is used to process the link in-memory.
+*Note: Although both methods should be identical, there are slight differences - for example in-memory processing provides thumbnails of images in icons as the icons are retrieved from link target. And it seems also a bit faster.*
 
 ### Taskbar Pinned Applications ###
 Getting the information about applications pinned to taskbar seems to be a bit tricky. The simplest way is to get the links (`.lnk`) from `AppData\Roaming\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar`. Trying this method, I struggled with getting the order of pins. The list of pinned applications is also stored in registry value `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband\Favorites` - a binary value without documented format. As the information in registry value is apparently in the right order, I tried to find the name of the link file and then sorted the links (retrieved from the directory mentioned above) by the position of name within the binary registry value. 

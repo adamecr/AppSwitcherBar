@@ -166,7 +166,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
             LoggerMessage.Define<string>(
                 LogLevel.Warning,
                 new EventId(1901, nameof(LogJumpListException)),
-                "Error while processing the JumpList {source}",
+                "Exception while processing the JumpList {source}",
                 LogOptions);
 
         /// <summary>
@@ -182,6 +182,32 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
             }
         }
 
+        //----------------------------------------------
+        // 1902 JumpList source parsing error
+        //----------------------------------------------
+
+        /// <summary>
+        /// Logger message definition for LogJumpListSourceParsingError
+        /// </summary>
+        private static readonly Action<ILogger, string, Exception?> __LogJumpListSourceParsingErrorDefinition =
+            LoggerMessage.Define<string>(
+                LogLevel.Warning,
+                new EventId(1902, nameof(LogJumpListSourceParsingError)),
+                "Error while parsing the JumpList source - {source}",
+                LogOptions);
+
+        /// <summary>
+        /// Logs record (Warning) when there is a problem when reading the JumpList source while
+        /// </summary>
+        /// <param name="source">Name of the JumpList source file</param>
+        private void LogJumpListSourceParsingError(string source)
+        {
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                __LogJumpListSourceParsingErrorDefinition(logger, source, null);
+            }
+        }
+
         // ReSharper restore InconsistentNaming
         #endregion
 
@@ -189,6 +215,12 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// Application settings
         /// </summary>
         private readonly IAppSettings settings;
+
+        /// <summary>
+        /// Dictionary of known AppIds from configuration containing pairs executable-appId (the key is in lower case)
+        /// When built from configuration, the record (key) is created for full path from config and another one without a path (file name only) if applicable
+        /// </summary>
+        private readonly Dictionary<string, string> knownAppIds;
 
         /// <summary>
         /// Internal CTOR
@@ -201,6 +233,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         {
             this.logger = logger;
             this.settings = settings;
+            knownAppIds = settings.GetKnowAppIds();
         }
 
         /// <summary>
@@ -301,7 +334,12 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                         //parse link from stream
                         using var input = new MemoryStream(oleStreamData);
                         var iStream = new NativeStreamWrapper(input);
-                        ParseLink(iStream, source, category, links, installedApplications, categoryCounter >= settings.JumpListCategoryLimit);
+                        if (!ParseLink(iStream, source, category, links, installedApplications, categoryCounter >= settings.JumpListCategoryLimit))
+                        {
+                            //something is wrong, doesn't make sense to continue
+                            LogJumpListSourceParsingError(source);
+                            break;
+                        }
                         categoryCounter++;
                     }
                 }
@@ -349,18 +387,25 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 for (var catIdx = 0; catIdx < categoryCnt; catIdx++)
                 {
                     var categoryType = reader.ReadInt32();
+                    var result = true;
                     switch (categoryType)
                     {
                         case 0: //custom category type - collection of custom destinations
                             var categoryTitle = ParseCategoryTitle(reader) ?? "Recent";
-                            ParseCategoryLinks(reader, iStream, source, categoryTitle, links, installedApplications, true);
+                            result = ParseCategoryLinks(reader, iStream, source, categoryTitle, links, installedApplications, true);
                             break;
                         case 1: //known category type - collection of known destinations (recent, frequent)
-                            ParseCategoryLinks(reader, iStream, source, "Recent", links, installedApplications, true);
+                            result = ParseKnownCategory(reader);
                             break;
                         case 2: //custom tasks - collection of tasks
-                            ParseCategoryLinks(reader, iStream, source, "Tasks", links, installedApplications, false);
+                            result = ParseCategoryLinks(reader, iStream, source, "Tasks", links, installedApplications, false);
                             break;
+                    }
+
+                    if (!result)
+                    {
+                        //some thing is wrong, it doesn't make sense to continue
+                        break;
                     }
                     ParseFooter(reader);
                 }
@@ -403,15 +448,23 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <param name="links">Target list of JumpList items</param>
         /// <param name="installedApplications">Infomration about installed applications</param>
         /// <param name="applyLimit">Flag whether to apply <see cref="AppSettings.JumpListCategoryLimit"/></param>
-        private void ParseCategoryLinks(BinaryReader reader, IStream iStream, string source, string category, List<LinkInfo> links, InstalledApplications installedApplications, bool applyLimit)
+        /// <returns>Returns False in case of error, otherwise true</returns>
+        private bool ParseCategoryLinks(BinaryReader reader, IStream iStream, string source, string category, List<LinkInfo> links, InstalledApplications installedApplications, bool applyLimit)
         {
             var categoryCounter = 0;
             var countItems = reader.ReadInt32();
-            for (var i = 0; i < countItems; i++)
+            for (var i = 0; i < Math.Min(countItems, 1000); i++) //have a hard limit big enough not to impact "normal" processing, but prevent long loops in case the format/parsing is not as expected and the count "makes no sense" (is too big)
             {
-                ParseLink(iStream, source, category, links, installedApplications, applyLimit && categoryCounter >= settings.JumpListCategoryLimit);
+                if (!ParseLink(iStream, source, category, links, installedApplications, applyLimit && categoryCounter >= settings.JumpListCategoryLimit))
+                {
+                    //something is wrong, doesn't make sense to continue
+                    LogJumpListSourceParsingError(source);
+                    return false;
+                }
                 categoryCounter++;
             }
+
+            return true;
         }
 
         /// <summary>
@@ -423,18 +476,19 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <param name="links">Target list of JumpList items</param>
         /// <param name="installedApplications">Infomration about installed applications</param>
         /// <param name="categoryLimitReached">Flag whether <see cref="AppSettings.JumpListCategoryLimit"/> has been already reached</param>
-        private void ParseLink(IStream iStream, string source, string category, List<LinkInfo> links, InstalledApplications installedApplications, bool categoryLimitReached)
+        /// <returns>Returns False in case of error, otherwise true</returns>
+        private bool ParseLink(IStream iStream, string source, string category, List<LinkInfo> links, InstalledApplications installedApplications, bool categoryLimitReached)
         {
-            var g = new Guid(Win32Consts.IID_IUnknown);
             object? obj = null;
             try
             {
                 //read IShellLink from Ole Stream - CLSID+serialized IShellLinkW
+                var g = new Guid(Win32Consts.IID_IUnknown);
                 var ret = Ole32.OleLoadFromStream(iStream, ref g, out obj);
-                if (categoryLimitReached || !ret.IsSuccess || obj is not IShellLinkW link) return; //when a category limit is reached, the links are still read from stream, but not processed
 
+                if (categoryLimitReached || !ret.IsSuccess || obj is not IShellLinkW link) return ret.IsSuccess; //when a category limit is reached, the links are still read from stream, but not processed
 
-                //get basig link information
+                //get basic link information
                 var sb = new StringBuilder(260);
                 var data = new WIN32_FIND_DATAW();
                 ret = link.GetPath(sb, sb.Capacity, data, 0);
@@ -469,49 +523,41 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 string? title = null;
                 var isStoreApp = false;
 
-                if (obj is IPersistStream persistStream && !settings.JumpListUseTempFiles)
+                if (!settings.JumpListUseTempFiles)
                 {
-                    //Try to get information from shell properties.
-                    //Save .lnk to mem stream, build new COM CShellLink from memstream and retrieve IPropertyStore and IShellItem2
-                    //ShellItem don't contain the properties here, it's used just to get icon
+                    //Try to get the information from shell properties of link
+                    //ShellItem is created from link's ID list, so it represents the link target and it's used just to get icon  (if not overriden by the properties within the link)
 
-                    using var memoryStream = new MemoryStream();
-                    var ist = new NativeStreamWrapper(memoryStream);
-                    persistStream.Save(ist, true);
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-
-                    // ReSharper disable SuspiciousTypeConversion.Global
-                    if (new CShellLink() is IShellLinkW memShellLink and IPersistStream memShellLinkPersistStream &&
-                       memShellLinkPersistStream.Load(ist).IsSuccess && memShellLink is IPropertyStore memShellLinkPropertyStore)
-                    {
-                        var idListPtr = memShellLink.GetIDList();
-                        var memShellLinkShellItem = Shell.Shell.CreateShellItemFromIdList(idListPtr);
-                        ProcessShellItem(memShellLinkPropertyStore, memShellLinkShellItem);
-                    }
-                    // ReSharper restore SuspiciousTypeConversion.Global
+                    // ReSharper disable once SuspiciousTypeConversion.Global
+                    var linkPropertyStore = link as IPropertyStore;
+                    var idListPtr = link.GetIDList();
+                    var memShellLinkShellItem = Shell.Shell.CreateShellItemFromIdList(idListPtr);
+                    ProcessLink(linkPropertyStore, memShellLinkShellItem);
                 }
 
 
-                if (obj is IPersistFile persistFile && settings.JumpListUseTempFiles)
+                // ReSharper disable once SuspiciousTypeConversion.Global
+                if (link is IPersistFile persistFile && settings.JumpListUseTempFiles)
                 {
-                    //Try to get information from shell properties.
+                    //Try to get the information from shell properties of link ShellItem
                     //Save .lnk to temp file, retrieve IShellItem2 for the temp file, get the info and delete the temp file.
+                    //The .lnk file is used as the icon source shell item here (if not overriden by the properties within the link)
 
                     var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".lnk");
                     persistFile.Save(tempFile, false);
 
                     var tmpFileShellItem = Shell.Shell.GetShellItemForPath(tempFile);
                     var tmpFilePropertyStore = tmpFileShellItem?.GetPropertyStore();
-                    ProcessShellItem(tmpFilePropertyStore, tmpFileShellItem);
+                    ProcessLink(tmpFilePropertyStore, tmpFileShellItem);
 
                     File.Delete(tempFile);
                 }
 
-                void ProcessShellItem(IPropertyStore? propertyStore, IShellItem2? shellItem)
+                void ProcessLink(IPropertyStore? propertyStore, IShellItem2? iconSourceShellItem)
                 {
-                    if (shellItem != null)
+                    if (iconSourceShellItem != null)
                     {
-                        icon ??= Shell.Shell.GetShellItemBitmapSource(shellItem, 32);
+                        icon ??= Shell.Shell.GetShellItemBitmapSource(iconSourceShellItem, 32);
                     }
 
                     if (propertyStore != null)
@@ -523,16 +569,22 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                             if (newTitle != null) title = newTitle;
                         }
 
-
-
                         //Check for Store (UWP) app and it's properties that can "override" the standard link ones
                         var appId = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID);
+                        if (string.IsNullOrEmpty(appId))
+                        {
+                            var targetExecutable = Path.GetFileName(targetPath);
+                            if (!string.IsNullOrEmpty(targetPath) && !string.IsNullOrEmpty(targetExecutable) && knownAppIds.TryGetValue(targetExecutable, out var knownAppId)) appId = knownAppId;
+                        }
+
                         if (!string.IsNullOrEmpty(appId))
                         {
-                            isStoreApp = true;
-                            targetPath = appId;
                             var packageFullName = installedApplications.GetPackageFullName(appId);
-
+                            if (!string.IsNullOrEmpty(packageFullName))
+                            {
+                                isStoreApp = true;
+                                targetPath = appId;
+                            }
 
                             propTitle = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Title); //try again, now with package info
                             if (!string.IsNullOrEmpty(propTitle))
@@ -599,7 +651,6 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     links.Add(linkInfo);
 
                     LogGotJumpListItem(source, $"{category}/{title}", $"{targetPath} {arguments}", icon != null);
-
                 }
                 else
                 {
@@ -607,10 +658,13 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     var linkInfo = LinkInfo.Separator;
                     links.Add(linkInfo);
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
                 LogJumpListException(source, ex);
+                return false;
             }
             finally
             {
@@ -620,7 +674,20 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Parses the known category from custom destinations file.
+        /// It's just a known category ID
+        /// </summary>
+        /// <param name="reader">Reader used to access the custom destinations file stream</param>
+        /// <returns>Always true</returns>
+        private static bool ParseKnownCategory(BinaryReader reader)
+        {
+            // ReSharper disable once UnusedVariable
+            var knownCategoryId = reader.ReadInt32();
+            return true;
+        }
+
         /// <summary>
         /// Parses the category footer from customs destinations file
         /// Just reads and forgets the data to move forward within the stream

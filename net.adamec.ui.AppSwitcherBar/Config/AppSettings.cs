@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using net.adamec.ui.AppSwitcherBar.AppBar;
 // ReSharper disable IdentifierTypo
@@ -139,6 +140,30 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// Application IDs collection
         /// </summary>
         public Dictionary<string, string>? AppIds { get; set; } = new();
+
+        /// <summary>
+        /// Get the dictionary of known appIds based on <see cref="AppIds"/> field - the key is expanded path to executable, value is the appId
+        /// </summary>
+        /// <returns>Dictionary of appIds (empty is no <see cref="AppIds"/> are presented)</returns>
+        public Dictionary<string, string> GetKnowAppIds()
+        {
+            var knownAppIds = new Dictionary<string, string>();
+            if (AppIds != null)
+            {
+                foreach (var (executable, appId) in AppIds)
+                {
+                    var keyFullPath = Environment.ExpandEnvironmentVariables(executable).Replace('/', '\\').ToLowerInvariant();
+                    knownAppIds[keyFullPath] = appId;
+
+                    var keyFileOnly = Path.GetFileName(keyFullPath);
+                    knownAppIds[keyFileOnly] = appId;
+                }
+            }
+            //make sure the explorer is there!
+            var explorerExecutable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe").ToLowerInvariant();
+            knownAppIds[explorerExecutable] = "Microsoft.Windows.Explorer";
+            return knownAppIds;
+        }
 
         /// <summary>
         /// Flag whether the application will invert the white icons (default is true)

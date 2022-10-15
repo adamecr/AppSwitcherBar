@@ -24,6 +24,11 @@ public class AppButtonManager : IEnumerable<ButtonInfo>, INotifyPropertyChanged,
     /// </summary>
     private IAppSettings Settings { get; }
 
+
+    /// <summary>
+    /// Flag whether the <see cref="AppButtonManager"/> is busy with update
+    /// </summary>
+    public bool IsBusy => updateMode != UpdateModeEnum.Idle;
     /// <summary>
     /// Current update mode of the manager
     /// </summary>

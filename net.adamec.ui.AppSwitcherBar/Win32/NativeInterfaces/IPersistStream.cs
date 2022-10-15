@@ -35,6 +35,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces
         /// </summary>
         /// <param name="pStm">An IStream pointer to the stream from which the object should be loaded.</param>
         /// <returns>This method can return the following values: S_OK - The method completed successfully, E_OUTOFMEMORY - The object was not loaded due to lack of memory, E_FAIL - The object was not loaded due to some reason other than a lack of memory.</returns>
+        [PreserveSig]
         HRESULT Load([In] IStream pStm);
 
         /// <summary>

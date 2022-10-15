@@ -119,6 +119,12 @@ public interface IAppSettings
     Dictionary<string, string>? AppIds { get; }
 
     /// <summary>
+    /// Get the dictionary of known appIds based on <see cref="AppIds"/> field - the key is expanded path to executable, value is the appId
+    /// </summary>
+    /// <returns>Dictionary of appIds (empty is no <see cref="AppIds"/> are presented)</returns>
+    Dictionary<string, string> GetKnowAppIds();
+
+    /// <summary>
     /// Flag whether the application will invert the white icons
     /// </summary>
     bool InvertWhiteIcons { get; }

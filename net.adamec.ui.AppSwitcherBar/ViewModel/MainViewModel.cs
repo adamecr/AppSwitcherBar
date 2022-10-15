@@ -102,7 +102,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// Dictionary of known AppIds from configuration containing pairs executable-appId (the key is in lower case)
         /// When built from configuration, the record (key) is created for full path from config and another one without a path (file name only) if applicable
         /// </summary>
-        private readonly Dictionary<string, string> knownAppIds = new();
+        private readonly Dictionary<string, string> knownAppIds;
 
         /// <summary>
         /// Application settings
@@ -206,7 +206,13 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// </summary>
         // ReSharper disable once InconsistentNaming
         private const string FF_AnonymizeWindows = "AnonymizeWindows";
-        
+
+        /// <summary>
+        /// Name of the Feature Flag for using the undocumented application resolver to get the app it
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        private const string FF_UseApplicationResolver = "UseApplicationResolver";
+
         /// <summary>
         /// Map used for simple anonymization
         /// </summary>
@@ -242,20 +248,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
             runOnWinStartupSet = startupService.HasAppStartupLink();
 
-            if (settings.AppIds != null)
-            {
-                foreach (var (executable, appId) in settings.AppIds)
-                {
-                    var keyFullPath = Environment.ExpandEnvironmentVariables(executable).Replace('/', '\\').ToLowerInvariant();
-                    knownAppIds[keyFullPath] = appId;
-
-                    var keyFileOnly = Path.GetFileName(keyFullPath);
-                    knownAppIds[keyFileOnly] = appId;
-                }
-            }
-            //make sure the explorer is there!
-            var explorerExecutable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe").ToLowerInvariant();
-            knownAppIds[explorerExecutable] = "Microsoft.Windows.Explorer";
+            knownAppIds = settings.GetKnowAppIds();
 
             if (settings.FeatureFlag(FF_AnonymizeWindows, false))
             {
@@ -266,7 +259,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             {
                 Interval = TimeSpan.FromMilliseconds(Settings.RefreshWindowInfosIntervalMs)
             };
-            timer.Tick += (_, _) => { RefreshAllWindowsCollection(false); };
+            timer.Tick += (_, _) => { if (!ButtonManager.IsBusy) RefreshAllWindowsCollection(false); };
 
             backgroundInitWorker = new BackgroundWorker();
             backgroundInitWorker.DoWork += (_, eventArgs) => { eventArgs.Result = RetrieveBackgroundData(); };
@@ -505,6 +498,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         var executable = WndAndApp.GetProcessExecutable(ptrProcess);
                         //new window
                         wnd = new WndInfo(hwnd, caption, threadId, processId, executable);
+
+                        //Try to get AppUserModelId using the win32 app resolver, no need to wait for background data
+                        if (Settings.FeatureFlag<bool>(FF_UseApplicationResolver))
+                           wnd.AppId = WndAndApp.GetWindowApplicationUserModelId(hwnd);
                     }
                     else
                     {
@@ -520,17 +517,26 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                     {
                         string? appUserModelId = null;
 
-                        //try to get AppUserModelId from window - for windows that explicitly define the AppId, 
-                        var store = Shell.GetPropertyStoreForWindow(wnd.Hwnd);
-                        if (store != null)
+                        //Try to get AppUserModelId using the win32 app resolver
+                        if (Settings.FeatureFlag<bool>(FF_UseApplicationResolver))
                         {
-                            var hr = store.GetCount(out var c);
-                            if (hr.IsSuccess && c > 0)
+                            appUserModelId = WndAndApp.GetWindowApplicationUserModelId(hwnd);
+                        }
+
+                        //Try to get AppUserModelId from window - for windows that explicitly define the AppId 
+                        if (appUserModelId == null)
+                        {
+                            var store = Shell.GetPropertyStoreForWindow(wnd.Hwnd);
+                            if (store != null)
                             {
-                                //try to get AppUserModelId property 
-                                appUserModelId = store.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID);
-                                var shellProperties = store.GetProperties();
-                                wnd.ShellProperties = shellProperties;
+                                var hr = store.GetCount(out var c);
+                                if (hr.IsSuccess && c > 0)
+                                {
+                                    //try to get AppUserModelId property 
+                                    appUserModelId = store.GetPropertyValue<string>(PropertyKey.PKEY_AppUserModel_ID);
+                                    var shellProperties = store.GetProperties();
+                                    wnd.ShellProperties = shellProperties;
+                                }
                             }
                         }
 
@@ -552,7 +558,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                             //try to get from installed app (identified by executable) or use executable as fallback
                             appUserModelId = installedApplications.GetAppIdFromExecutable(wnd.Executable, out var _);
                         }
-
+                        
                         wnd.AppId = appUserModelId;
                     }
 
