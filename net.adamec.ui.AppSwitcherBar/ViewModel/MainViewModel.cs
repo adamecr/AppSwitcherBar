@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.Options;
 using net.adamec.ui.AppSwitcherBar.AppBar;
 using net.adamec.ui.AppSwitcherBar.Config;
 using net.adamec.ui.AppSwitcherBar.Dto;
+using net.adamec.ui.AppSwitcherBar.Dto.Search;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces.Extensions;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
@@ -23,6 +25,7 @@ using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell.Properties;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Startup;
 using net.adamec.ui.AppSwitcherBar.Wpf;
+using static net.adamec.ui.AppSwitcherBar.Dto.PinnedAppInfo;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable IdentifierTypo
@@ -94,6 +97,11 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         private readonly InstalledApplications installedApplications = new();
 
         /// <summary>
+        /// Information about the applications pinned in the taskbar
+        /// </summary>
+        private PinnedAppInfo[] pinnedApplications = Array.Empty<PinnedAppInfo>();
+
+        /// <summary>
         /// Information about the known folder paths and GUIDs
         /// </summary>
         private StringGuidPair[] knownFolders = Array.Empty<StringGuidPair>();
@@ -138,6 +146,78 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         }
 
         /// <summary>
+        /// Flag whether the search is in progress 
+        /// </summary>
+        private bool isInSearch;
+
+        /// <summary>
+        /// Flag whether the search is in progress 
+        /// </summary>
+        public bool IsInSearch
+        {
+            get => isInSearch;
+            set
+            {
+                if (isInSearch != value)
+                {
+                    isInSearch = value;
+                    if (isInSearch)
+                    {
+                        InitSearch();
+                    }
+                    else
+                    {
+                        EndSearch();
+                    }
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Flag whether the search has results
+        /// </summary>
+        private bool hasSearchResults;
+
+        /// <summary>
+        /// Flag whether the search has results 
+        /// </summary>
+        public bool HasSearchResults
+        {
+            get => hasSearchResults;
+            private set
+            {
+                if (hasSearchResults != value)
+                {
+                    hasSearchResults = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Text to be searched for
+        /// </summary>
+        private string? searchText;
+
+        /// <summary>
+        /// Text to be searched for
+        /// </summary>
+        public string? SearchText
+        {
+            get => searchText;
+            set
+            {
+                if (searchText != value)
+                {
+                    searchText = value;
+                    DoSearch(searchText);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
         /// Array of the screen edges the app-bar can be docked to
         /// </summary>
         public AppBarDockMode[] Edges { get; } = {
@@ -154,7 +234,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <summary>
         /// Application window buttons group manager
         /// </summary>
-        public AppButtonManager ButtonManager { get; } 
+        public AppButtonManager ButtonManager { get; }
 
         /// <summary>
         /// Command requesting an "ad-hoc" refresh of the list of application windows (no param used)
@@ -191,6 +271,12 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// </summary>
         public ICommand LaunchPinnedAppCommand { get; }
 
+
+        /// <summary>
+        /// Command sending a special key press related to search
+        /// </summary>
+        public ICommand SearchSpecialKeyCommand { get; }
+
         /// <summary>
         /// JumpList service to be used
         /// </summary>
@@ -218,7 +304,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// </summary>
         /// 
         private readonly Dictionary<char, char> anonymizeMap = new();
-        
+
         /// <summary>
         /// Internal CTOR
         /// Directly used by <see cref="ViewModelLocator"/> when creating a design time instance.
@@ -245,6 +331,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             BuildContextMenuCommand = new RelayCommand(BuildContextMenu);
             ToggleRunOnStartupCommand = new RelayCommand(ToggleRunOnWinStartup);
             LaunchPinnedAppCommand = new RelayCommand(LaunchPinnedApp);
+            SearchSpecialKeyCommand = new RelayCommand(SearchSpecialKey);
 
             runOnWinStartupSet = startupService.HasAppStartupLink();
 
@@ -327,19 +414,19 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <param name="s">string to anonymize</param>
         /// <param name="saltInt">anonymization salt</param>
         /// <returns>anonymized string</returns>
-        private string? Anonymize(string? s,int saltInt)
+        private string? Anonymize(string? s, int saltInt)
         {
             if (s == null) return null;
             var salt = saltInt.ToString();
-            while (salt.Length < s.Length) 
+            while (salt.Length < s.Length)
             {
                 salt += salt;
             }
 
-            var retVal=string.Empty;
-            for (var i=0;i<s.Length;i++)
+            var retVal = string.Empty;
+            for (var i = 0; i < s.Length; i++)
             {
-                var c=s[i];
+                var c = s[i];
                 var cs = (char)(c + salt[i]);
                 retVal += anonymizeMap.TryGetValue(cs, out var a) ? a : anonymizeMap.TryGetValue(c, out a) ? a : c;
             }
@@ -368,17 +455,17 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 {
                     Shell.EnumShellItems(appsFolder, item =>
                      {
-
                          var appName = item.GetDisplayName();
                          var propertyStore = item.GetPropertyStore();
-                         
                          var shellProperties = propertyStore?.GetProperties() ?? new ShellPropertiesSubset(); //empty object
+                         if (!shellProperties.IsApplication) return; //not application (not runnable)
+
                          var appUserModelId = shellProperties.ApplicationUserModelId;
                          var iconSource = Shell.GetShellItemBitmapSource(item, 32);
-                         var lnk = propertyStore?.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath);
+                         var lnkTarget = propertyStore?.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath);
 
-                         dataInstalledApps.Add(new InstalledApplication(appName, appUserModelId, lnk, iconSource, shellProperties));
-                         LogInstalledAppInfo(appName, appUserModelId ?? "[Unknown]", iconSource != null, lnk ?? "[N/A]");
+                         dataInstalledApps.Add(new InstalledApplication(appName, appUserModelId, lnkTarget, iconSource, shellProperties));
+                         LogInstalledAppInfo(appName, appUserModelId ?? "[Unknown]", iconSource != null, lnkTarget ?? "[N/A]");
                      });
                 }
 
@@ -428,7 +515,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             }
             BackgroundDataRetrieved = true;
         }
-        
+
         /// <summary>
         /// Pulls the information about available application windows and updates <see cref="ButtonManager"/> window collection.
         /// </summary>
@@ -450,7 +537,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 //get known folders
                 knownFolders = Shell.GetKnownFolders();
                 //get information about pinned applications
-                var pinnedApplications = jumpListService.GetPinnedApplications(knownFolders);
+                pinnedApplications = jumpListService.GetPinnedApplications(knownFolders);
 
                 ButtonManager.BeginHardRefresh(pinnedApplications);
 
@@ -469,7 +556,12 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
             //Retrieve the current foreground window
             var foregroundWindow = WndAndApp.GetForegroundWindow();
-            if (foregroundWindow != mainWindowHwnd) lastForegroundWindow = foregroundWindow; //"filter out" the main window as being the foreground one to proper handle the toggle
+            if (foregroundWindow != mainWindowHwnd)
+            {
+                lastForegroundWindow = foregroundWindow; //"filter out" the main window as being the foreground one to proper handle the toggle
+
+                if (IsInSearch) EndSearch(); //cancel search when other app get's focus
+            }
 
             //Enum windows
             WndAndApp.EnumVisibleWindows(
@@ -486,10 +578,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
                         if (caption != appName)
                         {
-                            caption = (string.IsNullOrEmpty(appName) ? "" : $"{appName} - ") + Anonymize(caption,hwnd.ToInt32());
+                            caption = (string.IsNullOrEmpty(appName) ? "" : $"{appName} - ") + Anonymize(caption, hwnd.ToInt32());
                         }
                     }
-                    
+
 
                     //Check whether it's a "new" application window or a one already existing in the ButtonManager
                     if (wnd == null)
@@ -501,7 +593,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
 
                         //Try to get AppUserModelId using the win32 app resolver, no need to wait for background data
                         if (Settings.FeatureFlag<bool>(FF_UseApplicationResolver))
-                           wnd.AppId = WndAndApp.GetWindowApplicationUserModelId(hwnd);
+                            wnd.AppId = WndAndApp.GetWindowApplicationUserModelId(hwnd);
                     }
                     else
                     {
@@ -558,7 +650,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                             //try to get from installed app (identified by executable) or use executable as fallback
                             appUserModelId = installedApplications.GetAppIdFromExecutable(wnd.Executable, out var _);
                         }
-                        
+
                         wnd.AppId = appUserModelId;
                     }
 
@@ -609,21 +701,35 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         private void ToggleApplicationWindow(object? hwnd)
         {
             if (hwnd is not IntPtr hWndIntPtr || hWndIntPtr == IntPtr.Zero) return; //invalid command parameter, do nothing
+            ToggleApplicationWindow(hWndIntPtr, false);
+        }
+
+        /// <summary>
+        /// Switch the application window with given <paramref name="hwnd"/> to foreground or minimize it (if <paramref name="forceActivate"/> is not set).
+        /// </summary>
+        /// <remarks>
+        /// The function doesn't throw any exception when the handle is invalid, it just ignores it end "silently" returns
+        /// </remarks>
+        /// <param name="hwnd">Native handle (HWND) of the application window</param>
+        /// <param name="forceActivate">When the flag is set, the window is always activated. When it's false and the window is foreground already, it's minimized</param>
+        private void ToggleApplicationWindow(IntPtr hwnd, bool forceActivate)
+        {
+            if (hwnd == IntPtr.Zero) return; //invalid command parameter, do nothing
 
             //got the handle, get the window information
-            var wnd = ButtonManager[hWndIntPtr]; // AllWindows.FirstOrDefault(w => w.Hwnd == hWndIntPtr);
+            var wnd = ButtonManager[hwnd];
             if (wnd is null) return; //unknown window, do nothing
 
-            if (wnd.IsForeground)
+            if (wnd.IsForeground && !forceActivate)
             {
                 //it's a foreground window - minimize it and return
-                WndAndApp.MinimizeWindow(hWndIntPtr);
-                LogMinimizeApp(hWndIntPtr, wnd.Title);
+                WndAndApp.MinimizeWindow(hwnd);
+                LogMinimizeApp(hwnd, wnd.Title);
                 return;
             }
 
-            var wasMinimized = WndAndApp.ActivateWindow(hWndIntPtr);
-            LogSwitchApp(hWndIntPtr, wnd.Title, wasMinimized);
+            var wasMinimized = WndAndApp.ActivateWindow(hwnd);
+            LogSwitchApp(hwnd, wnd.Title, wasMinimized);
 
             //refresh the window list
             RefreshAllWindowsCollection(false);
@@ -674,43 +780,42 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// Launches the pinned application
         /// Parameter <paramref name="param"/> must be <see cref="PinnedAppInfo"/> object
         /// </summary>
-        /// <param name="param"><see cref="PinnedAppInfo"/> object with reference to <see cref="AppButton"/> and <see cref="WndInfo"/></param>
+        /// <param name="param"><see cref="PinnedAppInfo"/> object with reference to pinned application</param>
         /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="PinnedAppInfo"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
 
         private void LaunchPinnedApp(object? param)
         {
-            if (param is not PinnedAppInfo cmdParams)
+            if (param is not PinnedAppInfo pinnedAppInfo)
             {
                 LogWrongCommandParameter(nameof(PinnedAppInfo));
                 throw new ArgumentException($"Command parameter must be {nameof(PinnedAppInfo)}", nameof(param));
             }
 
-            LaunchPinnedApp(cmdParams);
+            pinnedAppInfo.LaunchPinnedApp(e =>
+            {
+                LogCantStartApp(pinnedAppInfo.PinnedAppType == PinnedAppTypeEnum.Package ? pinnedAppInfo.AppId ?? "[Null] appID" : pinnedAppInfo.LinkFile ?? "[Null] link file", e);
+            });
         }
 
         /// <summary>
-        /// Launches the pinned application
+        /// Launches the installed application
+        /// Parameter <paramref name="param"/> must be <see cref="InstalledApplication"/> object
         /// </summary>
-        ///<param name="pinnedApp">Pinned application info</param>
-        private void LaunchPinnedApp(PinnedAppInfo pinnedApp)
-        {
-            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
-            if (pinnedApp == null) return; //can't do anyting
+        /// <param name="param"><see cref="InstalledApplication"/> object with reference to installed application</param>
+        /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="InstalledApplication"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
 
-            if (pinnedApp.PinnedAppType == PinnedAppInfo.PinnedAppTypeEnum.Package)
+        private void LaunchInstalledApp(object? param)
+        {
+            if (param is not InstalledApplication installedApplication)
             {
-                Package.ActivateApplication(pinnedApp.AppId, null, out _);
+                LogWrongCommandParameter(nameof(InstalledApplication));
+                throw new ArgumentException($"Command parameter must be {nameof(InstalledApplication)}", nameof(param));
             }
-            else
+
+            installedApplication.LaunchInstalledApp(e =>
             {
-                if (pinnedApp.LinkFile == null || !File.Exists(pinnedApp.LinkFile)) return; //can't do anything
-                //launch link
-                var startInfo = new ProcessStartInfo(pinnedApp.LinkFile)
-                {
-                    UseShellExecute = true
-                };
-                Process.Start(startInfo);
-            }
+                LogCantStartApp(installedApplication.ShellProperties.IsStoreApp ? installedApplication.AppUserModelId ?? "[Null] appID" : installedApplication.Executable ?? "[Null] file", e);
+            });
         }
 
         /// <summary>
@@ -746,21 +851,6 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             {
                 //appId can be an executable full path, ensure that known folders are transformed to their GUIDs
                 appId = Shell.ReplaceKnownFolderWithGuid(appId);
-                /*foreach (var knownFolder in knownFolders)
-                {
-                    if (appId == knownFolder.String)
-                    {
-                        appId = knownFolder.GuidStr;
-                        break;
-                    }
-
-                    // ReSharper disable once InvertIf
-                    if (appId.StartsWith(knownFolder.String))
-                    {
-                        appId = knownFolder.GuidStr + appId[knownFolder.String.Length..];
-                        break;
-                    }
-                }*/
 
                 //JumpList into the context menu
                 var jumplistItems = jumpListService.GetJumpListItems(appId!, installedApplications);
@@ -788,11 +878,11 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         {
                             Header = linkInfo.Name
                         };
-                        
+
                         //caption anonymization
-                        if (Settings.FeatureFlag<bool>(FF_AnonymizeWindows) && linkInfo.Category!="Tasks")
+                        if (Settings.FeatureFlag<bool>(FF_AnonymizeWindows) && linkInfo.Category != "Tasks")
                         {
-                            menuItem.Header = Anonymize(linkInfo.Name,linkInfo.GetHashCode());
+                            menuItem.Header = Anonymize(linkInfo.Name, linkInfo.GetHashCode());
                         }
 
                         if (linkInfo.Icon != null)
@@ -1003,6 +1093,266 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             RunOnWinStartupSet = startupService.HasAppStartupLink();
         }
 
+        private void InitSearch()
+        {
+            if (!Settings.AllowSearch) return;
+
+            //clean the search box
+            SearchText = string.Empty;
+
+            IsInSearch = true;
+
+        }
+
+        public ObservableCollection<SearchResultItem> SearchResults { get; private set; } = new();
+
+        private void DoSearch(string? text)
+        {
+            if(!Settings.AllowSearch) return;
+
+            if (string.IsNullOrEmpty(text))
+            {
+                SearchResults.Clear();
+                HasSearchResults = false;
+                return;
+            }
+
+            var lastDefaultRef = GetSearchResultDefault()?.ResultReference;
+            SearchResults.Clear();
+            var isWindowsOnlySearch = false;
+            var isAppsOnlySearch = false;
+
+            if (text.ToLowerInvariant().StartsWith("w:"))
+            {
+                text = (text + " ")[2..];
+                isWindowsOnlySearch = true;
+            }
+            else if (text.ToLowerInvariant().StartsWith("a:"))
+            {
+                text = (text + " ")[2..];
+                isAppsOnlySearch = true;
+            }
+
+            text = text.Trim();
+
+            var categoryLimit = Settings.SearchListCategoryLimit;
+            var needsSeparator = false;
+
+            if (!isAppsOnlySearch)
+            {
+                var windows = ButtonManager
+                    .Where(b => b is WndInfo && b.Title.Contains(text, StringComparison.InvariantCultureIgnoreCase))
+                    .Cast<WndInfo>().ToArray();
+                if (windows.Length > 0)
+                {
+                    SearchResults.Add(new SearchResultItemHeader("Windows"));
+                    foreach (var window in windows.Take(categoryLimit))
+                    {
+                        var item = new SearchResultItemWindow(window, w => ToggleApplicationWindow(w.Hwnd, true));
+                        if (window == lastDefaultRef)
+                        {
+                            item.IsDefault = true;
+                        }
+
+                        SearchResults.Add(item);
+                    }
+
+                    if (windows.Length > categoryLimit) SearchResults.Add(new SearchResultItemMoreItems());
+
+                    needsSeparator = true;
+                }
+            }
+
+            if (!isWindowsOnlySearch)
+            {
+                var pins = pinnedApplications
+                    .Where(b => b.Title.Contains(text, StringComparison.InvariantCultureIgnoreCase))
+                    .ToArray();
+                if (pins.Length > 0)
+                {
+                    if (needsSeparator)
+                    {
+                        SearchResults.Add(new SearchResultItemSeparator());
+                    }
+
+                    SearchResults.Add(new SearchResultItemHeader("Pinned applications"));
+                    foreach (var pin in pins.Take(categoryLimit))
+                    {
+                        var item = new SearchResultItemPinnedApp(pin, LaunchPinnedApp);
+                        if (pin == lastDefaultRef)
+                        {
+                            item.IsDefault = true;
+                        }
+
+                        SearchResults.Add(item);
+                    }
+
+                    if (pins.Length > categoryLimit) SearchResults.Add(new SearchResultItemMoreItems());
+
+                    needsSeparator = true;
+                }
+
+
+                var installs = installedApplications.SearchByName(text).ToArray();
+                if (installs.Length > 0)
+                {
+                    if (needsSeparator)
+                    {
+                        SearchResults.Add(new SearchResultItemSeparator());
+                    }
+
+                    SearchResults.Add(new SearchResultItemHeader("Applications"));
+                    foreach (var install in installs.Take(categoryLimit))
+                    {
+                        var item = new SearchResultItemInstalledApp(install, LaunchInstalledApp);
+                        if (install == lastDefaultRef)
+                        {
+                            item.IsDefault = true;
+                        }
+
+                        SearchResults.Add(item);
+                    }
+
+                    if (installs.Length > categoryLimit) SearchResults.Add(new SearchResultItemMoreItems());
+                }
+            }
+
+            HasSearchResults = SearchResults.Count > 0;
+            if (GetSearchResultDefault() == null && HasSearchResults)
+            {
+                GetSearchResultsWithRef()[0].IsDefault = true;
+            }
+        }
+
+        private void EndSearch()
+        {
+            //clean the search box
+            SearchText = string.Empty;
+            IsInSearch = false;
+        }
+
+        /// <summary>
+        /// Process the special key for search 
+        /// Parameter <paramref name="param"/> must be <see cref="Key"/> value
+        /// </summary>
+        /// <param name="param"><see cref="Key"/> pressed </param>
+        /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="Key"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
+        private void SearchSpecialKey(object? param)
+        {
+            if (!Settings.AllowSearch) return;
+
+            if (param is not Key key)
+            {
+                LogWrongCommandParameter(nameof(Key));
+                throw new ArgumentException($"Command parameter must be {nameof(Key)}",
+                    nameof(param));
+            }
+
+            if (key == Key.Escape)
+            {
+                if (!string.IsNullOrEmpty(SearchText))
+                {
+                    SearchText = string.Empty;
+                }
+                else
+                {
+                    EndSearch();
+                }
+            }
+
+            if (key == Key.Enter)
+            {
+                GetSearchResultDefault()?.Launch();
+            }
+
+            if (key == Key.Up)
+            {
+                var results = GetSearchResultsWithRef();
+                var current = GetSearchResultDefault();
+                if (current != null)
+                {
+                    var idx = results.IndexOf(current);
+                    idx--;
+                    if (idx >= 0)
+                    {
+                        current.IsDefault = false;
+                        results[idx].IsDefault = true;
+                    }
+                }
+            }
+
+            if (key == Key.Down)
+            {
+                var results = GetSearchResultsWithRef();
+                var current = GetSearchResultDefault();
+                if (current != null)
+                {
+                    var idx = results.IndexOf(current);
+                    idx++;
+                    if (idx < results.Count)
+                    {
+                        current.IsDefault = false;
+                        results[idx].IsDefault = true;
+                    }
+                }
+            }
+
+            if (key == Key.PageUp)
+            {
+                var results = GetSearchResultsWithRef();
+                var current = GetSearchResultDefault();
+
+                if (current != null)
+                {
+                    var idx = results.IndexOf(current);
+                    var currentType = current.GetType();
+
+                    do
+                    {
+                        idx--;
+                        if (idx < 0 || results[idx].GetType() == currentType) continue;
+
+                        current.IsDefault = false;
+                        results[idx].IsDefault = true;
+                        break;
+                    } while (idx >= 0);
+                }
+            }
+
+            if (key == Key.PageDown)
+            {
+                var results = GetSearchResultsWithRef();
+                var current = GetSearchResultDefault();
+
+                if (current != null)
+                {
+                    var idx = results.IndexOf(current);
+                    var currentType = current.GetType();
+
+                    do
+                    {
+                        idx++;
+                        if (idx >= results.Count || results[idx].GetType() == currentType) continue;
+
+                        current.IsDefault = false;
+                        results[idx].IsDefault = true;
+                        break;
+                    } while (idx < results.Count);
+                }
+            }
+        }
+
+        private List<SearchResultItemWithRef> GetSearchResultsWithRef()
+        {
+            var results = SearchResults.Where(r => r is SearchResultItemWithRef).Cast<SearchResultItemWithRef>().ToList();
+            return results;
+        }
+        private SearchResultItemWithRef? GetSearchResultDefault()
+        {
+            var result = GetSearchResultsWithRef().FirstOrDefault(r => r.IsDefault);
+            return result;
+        }
+
         /// <summary>
         /// Occurs when a property value changes
         /// </summary>
@@ -1018,4 +1368,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
+
+
+
 }

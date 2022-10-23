@@ -75,7 +75,9 @@ internal static class PropertyStoreExtensions
             ParsingName = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_ParsingName),
             ParsingPath = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_ParsingPath),
             LinkTargetParsingPath = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath),
-            PackageIconResource = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath)
+            LinkArguments = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Link_Arguments),
+            PackageIconResource = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath),
+            RunFlags = propertyStore.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_RunFlags)
         };
 
         return retVal;

@@ -1,4 +1,5 @@
-﻿using net.adamec.ui.AppSwitcherBar.Dto;
+﻿using System.Text;
+using net.adamec.ui.AppSwitcherBar.Dto;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell.Properties;
@@ -73,7 +74,9 @@ internal static class ShellItemExtensions
             ParsingName = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_ParsingName),
             ParsingPath = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_ParsingPath),
             LinkTargetParsingPath = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath),
-            PackageIconResource = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath)
+            LinkArguments = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Link_Arguments),
+            PackageIconResource = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath),
+            RunFlags = shellItem.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_RunFlags)
         };
 
         return retVal;
@@ -86,7 +89,23 @@ internal static class ShellItemExtensions
     /// <returns>Display name of the shell item</returns>
     public static string GetDisplayName(this IShellItem shellItem)
     {
-        return shellItem.GetDisplayName(SIGDN.NORMALDISPLAY);
+        var hr = shellItem.GetDisplayName(SIGDN.NORMALDISPLAY, out var name);
+        return hr.IsSuccess ? name??string.Empty : string.Empty;
+    }
+
+    /// <summary>
+    /// Gets a file system path for shell item
+    /// </summary>
+    /// <param name="shellItem">Shell item to get the path of</param>
+    /// <returns>Full path of shell item or null when can't retrieve it</returns>
+    public static string? GetPath(this IShellItem shellItem)
+    {
+        var hr = shellItem.GetDisplayName(SIGDN.FILESYSPATH, out var path);
+        if (path == null)
+        {
+            hr = shellItem.GetDisplayName(Win32.NativeEnums.SIGDN.DESKTOPABSOLUTEPARSING, out path);
+        }
+        return hr.IsSuccess ? path : null;
     }
 
     /// <summary>

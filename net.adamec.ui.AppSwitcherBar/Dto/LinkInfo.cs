@@ -71,11 +71,18 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         public bool HasTarget => !string.IsNullOrEmpty(TargetPath);
 
         /// <summary>
+        /// Simple hash of the link info based on the <see cref="TargetPath"/> and <see cref="Arguments"/>.
+        /// It can be used for simple deduplication
+        /// </summary>
+        public int Hash { get; }
+
+        /// <summary>
         /// CTOR
         /// </summary>
         private LinkInfo()
         {
             IsSeparator = false;
+            Hash=string.Empty.GetHashCode();
         }
 
         /// <summary>
@@ -111,6 +118,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
             Icon = icon;
             IsStoreApp = isStoreApp;
             Source = source;
+            Hash= $"{TargetPath?.ToLowerInvariant()}|{Arguments?.ToLowerInvariant()}".GetHashCode();
         }
 
         /// <summary>

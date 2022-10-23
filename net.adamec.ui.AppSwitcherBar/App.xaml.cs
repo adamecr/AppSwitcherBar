@@ -120,7 +120,23 @@ namespace net.adamec.ui.AppSwitcherBar
             //Register services
             if (bool.TryParse(configuration["AppSettings:FeatureFlags:JumpList"], out var hasJumpList) && hasJumpList)
             {
-                services.AddSingleton<IJumpListService, JumpListService>();
+                var jumpListSvcVersion =
+                    int.TryParse(configuration["AppSettings:FeatureFlags:JumpListSvcVersion"], out var parsedVersion)
+                        ? parsedVersion
+                        : 2;
+
+                switch (jumpListSvcVersion)
+                {
+                    case 1:
+                        services.AddSingleton<IJumpListService, JumpListService>(); 
+                        break;
+                    case 2:
+                        services.AddSingleton<IJumpListService, JumpListService2>();
+                        break;
+                    default:
+                        services.AddSingleton<IJumpListService, JumpListService2>();
+                        break;
+                }
             }
             else
             {

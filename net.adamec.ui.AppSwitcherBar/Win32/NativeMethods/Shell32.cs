@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security;
 using System.Text;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeConstants;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
@@ -10,6 +8,7 @@ using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
 // ReSharper disable CommentTypo
 // ReSharper disable IdentifierTypo
 // ReSharper disable UnusedMember.Global
+// ReSharper disable InconsistentNaming
 
 namespace net.adamec.ui.AppSwitcherBar.Win32.NativeMethods
 {
@@ -196,6 +195,15 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeMethods
         /// <returns>Returns a pointer to an ITEMIDLIST structure that corresponds to the path.</returns>
         [DllImport(DLL_NAME, CharSet = CharSet.Auto)]
         internal static extern IntPtr ILCreateFromPath([In, MarshalAs(UnmanagedType.LPWStr)] string pszPath);
+
+        /// <summary>
+        /// Retrieves the pointer to an item identifier list (PIDL) of an object
+        /// </summary>
+        /// <param name="punk">A pointer to the IUnknown of the object from which to get the PIDL.</param>
+        /// <param name="pidl">When this function returns, contains a pointer to the PIDL of the given object.</param>
+        /// <returns>If this function succeeds, it returns S_OK. Otherwise, it returns an HRESULT error code.</returns>
+        [DllImport(DLL_NAME, PreserveSig = true)]
+        internal static extern HRESULT SHGetIDListFromObject([In, MarshalAs(UnmanagedType.IUnknown)] object punk, [Out] out IntPtr pidl);
     }
 
 }

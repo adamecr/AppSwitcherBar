@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
@@ -86,6 +87,34 @@ public class PinnedAppInfo : ButtonInfo
     {
         base.SetIndicies(groupIndex, windowIndex);
         return this;
+    }
+
+    /// <summary>
+    /// Launches the pinned application
+    /// </summary>
+    public void LaunchPinnedApp(Action<Exception>? errorAction)
+    {
+        try
+        {
+            if (PinnedAppType == PinnedAppTypeEnum.Package)
+            {
+                Package.ActivateApplication(AppId, null, out _);
+            }
+            else
+            {
+                if (LinkFile == null || !File.Exists(LinkFile)) return; //can't do anything
+                //launch link
+                var startInfo = new ProcessStartInfo(LinkFile)
+                {
+                    UseShellExecute = true
+                };
+                Process.Start(startInfo);
+            }
+        }
+        catch (Exception exception)
+        {
+            errorAction?.Invoke(exception);
+        }
     }
 
     /// <summary>

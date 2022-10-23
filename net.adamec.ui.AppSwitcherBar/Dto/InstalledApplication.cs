@@ -1,4 +1,9 @@
-﻿using System.Windows.Media.Imaging;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Windows.Media.Imaging;
+using net.adamec.ui.AppSwitcherBar.Win32.Services;
+
 // ReSharper disable StringLiteralTypo
 
 namespace net.adamec.ui.AppSwitcherBar.Dto
@@ -30,7 +35,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Some of the shell properties
         /// </summary>
         public ShellPropertiesSubset ShellProperties { get; }
-
+        
         /// <summary>
         /// CTOR
         /// </summary>
@@ -39,13 +44,43 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <param name="executable">Link to the application (executable) if available</param>
         /// <param name="iconSource">Icon of the application if available</param>
         /// <param name="shellProperties">Some of the shell properties</param>
-        public InstalledApplication(string name, string? appUserModelId, string? executable, BitmapSource? iconSource, ShellPropertiesSubset shellProperties)
+       public InstalledApplication(string name, string? appUserModelId, string? executable, BitmapSource? iconSource, ShellPropertiesSubset shellProperties)
         {
             Name = name;
             AppUserModelId = appUserModelId;
             Executable = executable;
             IconSource = iconSource;
             ShellProperties = shellProperties;
+        }
+
+        /// <summary>
+        /// Launches the installed application
+        /// </summary>
+        public void LaunchInstalledApp(Action<Exception>? errorAction)
+        {
+            try
+            {
+                if (ShellProperties.IsStoreApp)
+                {
+                    Package.ActivateApplication(AppUserModelId, null, out _);
+                }
+                else
+                {
+                    if (Executable == null || !File.Exists(Executable)) return; //can't do anything
+                    //launch link
+                    var startInfo = new ProcessStartInfo(Executable)
+                    {
+                        Arguments = ShellProperties.LinkArguments,
+                        WorkingDirectory = Path.GetDirectoryName(Executable),
+                        UseShellExecute = true
+                    };
+                    Process.Start(startInfo);
+                }
+            }
+            catch (Exception exception)
+            {
+                errorAction?.Invoke(exception);
+            }
         }
 
         /// <summary>

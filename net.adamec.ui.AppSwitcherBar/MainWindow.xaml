@@ -9,7 +9,9 @@
     xmlns:viewModel="clr-namespace:net.adamec.ui.AppSwitcherBar.ViewModel"
     xmlns:wpf="clr-namespace:net.adamec.ui.AppSwitcherBar.Wpf"
     xmlns:dto="clr-namespace:net.adamec.ui.AppSwitcherBar.Dto"
-    mc:Ignorable="d"
+    xmlns:ignore="http://dummy"
+    xmlns:search="clr-namespace:net.adamec.ui.AppSwitcherBar.Dto.Search"
+    mc:Ignorable="d ignore"
     x:Name="Root"
     Title="MainWindow"
     Icon="/AppSwitcherBar.ico" >
@@ -34,6 +36,7 @@
                 </Style.Triggers>
             </Style>
         </DockPanel.Style>
+        <!-- Resize Thumb -->
         <Thumb Background="Gray" DragCompleted="ResizeDragCompleted" DragDelta="ResizeDragDelta" DragStarted="ResizeDragStarted" appBar:AppBarWindow.BarAutoSize="Add">
             <Thumb.Style>
                 <Style TargetType="{x:Type Thumb}">
@@ -63,24 +66,21 @@
             </Thumb.Style>
         </Thumb>
 
-        <StackPanel Margin="3">
+        <!-- Controls (button) bar -->
+        <StackPanel Orientation="Horizontal" Margin="3" VerticalAlignment="Top" HorizontalAlignment="Left">
             <StackPanel.Style>
                 <Style TargetType="{x:Type StackPanel}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
-                            <Setter Property="Orientation" Value="Horizontal" />
                             <Setter Property="DockPanel.Dock" Value="Top" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
-                            <Setter Property="Orientation" Value="Horizontal" />
                             <Setter Property="DockPanel.Dock" Value="Top" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
-                            <Setter Property="Orientation" Value="Vertical" />
                             <Setter Property="DockPanel.Dock" Value="Left" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
-                            <Setter Property="Orientation" Value="Vertical" />
                             <Setter Property="DockPanel.Dock" Value="Left" />
                         </DataTrigger>
                     </Style.Triggers>
@@ -88,9 +88,13 @@
             </StackPanel.Style>
             <Button Click="Close" Content="{iconPacks:BootstrapIcons Kind=X, Width=13, Height=13 }" Margin="1" Width="18" Height="18"/>
             <ToggleButton Content="{iconPacks:BootstrapIcons Kind=Gear, Width=13, Height=13}" x:Name="SettingToggle" Margin="1" Width="18" Height="18" />
+            <ToggleButton Content="{iconPacks:BootstrapIcons Kind=Search, Width=13, Height=13}" Margin="1" Width="18" Height="18"
+                          IsChecked="{Binding IsInSearch}" x:Name="SearchToggle" 
+                          Visibility="{Binding Settings.AllowSearch, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </StackPanel>
 
-        <WrapPanel Margin="3"  >
+        <!-- Settings panel -->
+        <WrapPanel Margin="3" d:Visibility="Visible">
             <WrapPanel.Style>
                 <Style TargetType="{x:Type WrapPanel}">
                     <Style.Triggers>
@@ -105,10 +109,12 @@
                         <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
                             <Setter Property="Orientation" Value="Vertical" />
                             <Setter Property="DockPanel.Dock" Value="Left" />
+                            <Setter Property="MinHeight" Value="{Binding ActualHeight, ElementName=MainPanel, Mode=OneWay}"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
                             <Setter Property="Orientation" Value="Vertical" />
                             <Setter Property="DockPanel.Dock" Value="Left" />
+                            <Setter Property="MinHeight" Value="{Binding ActualHeight, ElementName=MainPanel, Mode=OneWay}"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding IsChecked, ElementName=SettingToggle}" Value="True">
                             <Setter Property="Visibility" Value="Visible" />
@@ -148,7 +154,159 @@
 
         </WrapPanel>
 
-        <WrapPanel>
+        <!-- Search popup -->
+
+        <Popup IsOpen="{Binding IsInSearch, Mode=OneWay}"
+               PlacementTarget="{Binding ElementName=SearchToggle}"
+               AllowsTransparency="True"
+               HorizontalOffset="0"
+               VerticalOffset="0"
+               Width="{Binding Settings.SearchResultPanelWidth}">
+            <Popup.Style>
+                <Style TargetType="{x:Type Popup}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                            <Setter Property="Placement" Value="Right" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                            <Setter Property="Placement" Value="Left" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                            <Setter Property="Placement" Value="Bottom" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                            <Setter Property="Placement" Value="Top" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Popup.Style>
+            <Border BorderThickness="1" BorderBrush="Gainsboro" Background="WhiteSmoke" ignore:CornerRadius="5" >
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Menu Margin="5" ItemsSource="{Binding SearchResults}" Background="Transparent">
+                        <ItemsControl.Style>
+                            <Style>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Left">
+                                        <Setter Property="Grid.Row" Value="1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Right">
+                                        <Setter Property="Grid.Row" Value="1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Top">
+                                        <Setter Property="Grid.Row" Value="1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Bottom">
+                                        <Setter Property="Grid.Row" Value="0" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.Style>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <Menu.ItemContainerStyle>
+                            <Style TargetType="{x:Type MenuItem}" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="Command" Value="{Binding Command}"/>
+                            </Style>
+                        </Menu.ItemContainerStyle>
+
+                        <ItemsControl.Resources>
+                            <DataTemplate DataType="{x:Type search:SearchResultItemHeader}">
+                                <TextBlock Margin="0,0,0,3" Text="{Binding Title}"  FontWeight="Bold" Foreground="Gray"/>
+                            </DataTemplate>
+                            <DataTemplate DataType="{x:Type search:SearchResultItemWithRef}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="25"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Image Grid.Column="0" Margin="3" Source="{Binding Icon}" VerticalAlignment="Center" Width="16" Height="16"/>
+                                    <TextBlock Grid.Column="1" Margin="2" Text="{Binding Title}" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDefault}" Value="True">
+                                                        <Setter Property="TextBlock.FontWeight" Value="Bold"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </DataTemplate>
+                            <DataTemplate DataType="{x:Type search:SearchResultItemMoreItems}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="25"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Column="1" Margin="2,0,2,2" Text="..."  FontWeight="Bold" Foreground="Gray" VerticalAlignment="Top"/>
+                                </Grid>
+                            </DataTemplate>
+                            <DataTemplate DataType="{x:Type search:SearchResultItemSeparator}">
+                                <Border BorderThickness="0,1,0,0" Margin="3" BorderBrush="Gainsboro"></Border>
+                            </DataTemplate>
+                        </ItemsControl.Resources>
+                    </Menu>
+                    <Grid>
+                        <Grid.Style>
+                            <Style>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Left">
+                                        <Setter Property="Grid.Row" Value="0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Right">
+                                        <Setter Property="Grid.Row" Value="0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Top">
+                                        <Setter Property="Grid.Row" Value="0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Path=DockMode ,ElementName=Root}" Value="Bottom">
+                                        <Setter Property="Grid.Row" Value="1" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <iconPacks:PackIconBootstrapIcons Grid.Column="0" Kind="Search" Margin="1" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1" MinWidth="120"
+                                 Margin="1"
+                                 VerticalAlignment="Center"
+                                 ignore:xName="SearchBox"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 wpf:VisibleFocusBehavior.FocusOnVisible="True"
+                                 wpf:KeyCommand.Command="{Binding SearchSpecialKeyCommand}">
+                            <wpf:KeyCommand.Keys>
+                                <Key>Enter</Key>
+                                <Key>Escape</Key>
+                                <Key>Up</Key>
+                                <Key>Down</Key>
+                                <Key>PageUp</Key>
+                                <Key>PageDown</Key>
+                            </wpf:KeyCommand.Keys>
+                        </TextBox>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Popup>
+
+        <!-- Main panel (window/pin buttons) -->
+        <WrapPanel Name="MainPanel">
             <WrapPanel.Style>
                 <Style TargetType="{x:Type WrapPanel}">
                     <Style.Triggers>
@@ -224,7 +382,7 @@
                                             <Setter Property="Background" Value="Navy" />
                                             <Setter Property="Foreground" Value="White" />
                                         </MultiDataTrigger>
-                                        
+
                                         <DataTrigger Binding="{Binding Path=Type}" Value="{x:Type dto:PinnedAppInfo}">
                                             <Setter Property="Command" Value="{Binding DataContext.LaunchPinnedAppCommand, ElementName=Root}" />
                                             <Setter Property="CommandParameter" Value="{Binding Path=.}"></Setter>

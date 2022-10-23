@@ -200,6 +200,21 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// </summary>
         public bool ShowPinnedApps { get; set; } = true;
 
+        /// <summary>
+        /// Flag whether to allow the search functionality (default is true)
+        /// </summary>
+        public bool AllowSearch { get; set; } = true;
+
+        /// <summary>
+        /// Maximum number of items in single category when presenting the search results (default is 5)
+        /// </summary>
+        public int SearchListCategoryLimit { get; set; } = 5;
+
+        /// <summary>
+        /// Width of the panel presenting the search results (default is 400)
+        /// </summary>
+        public int SearchResultPanelWidth { get; set; } = 400;
+
         //---------------------------------------------------------------------
 
         /// <summary>

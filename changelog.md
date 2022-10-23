@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased ##
 
+## [1.3.0] - 2022-10-23 ##
+### Added ###
+- **Search support** - allows to search by window caption, pinned application name and installed application name. The search results are presented in the list and allow the user to launch them.
+- Version 2 of JumpList service (`JumpListService2`)
+  - uses IID_IAutomaticDestinationList2 API to read the automatic destinations
+  - "merging" of the automatic and custom destinations (categories and items) updated to mirror Windows behavior
+  - Version (1 or 2) can be set by feature flag `JumpListSvcVersion`. Version 2 is used by default
+- Application settings: `AllowSearch`,`SearchListCategoryLimit`, `SearchResultPanelWidth`
+
 ## [1.2.1] - 2022-10-15 ##
 ### Added ###
 - Logging of unhandled exceptions, so it can be possible to check in EventLog the details when the application crash
@@ -19,6 +28,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Some corrections in the documentation
 - Exception handling in `WndAndApp.GetWindowIcon` when calling `Imaging.CreateBitmapSourceFromHIcon`
 
+
+### Fixed ###
+- Exclude non runnable links from installed applications (these are usually document/web shortcuts in Start menu)
 
 ## [1.2.0] - 2022-08-20 ##
 ### Added ###
@@ -58,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added ###
 - Initial application release
 
+[1.3.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.0.0...v1.1.0

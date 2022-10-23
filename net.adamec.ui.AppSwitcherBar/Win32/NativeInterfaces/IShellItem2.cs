@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeConstants;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
@@ -42,9 +43,10 @@ internal interface IShellItem2 : IShellItem
     /// Gets the display name of the IShellItem object.
     /// </summary>
     /// <param name="sigdnName">One of the SIGDN values that indicates how the name should look.</param>
-    /// <returns>A value that, when this function returns successfully, receives the address of a pointer to the retrieved display name.</returns>
-    [return: MarshalAs(UnmanagedType.LPWStr)]
-    new string GetDisplayName(SIGDN sigdnName);
+    /// <param name="ppszName">Retrieved display name</param>
+    /// <returns>If this method succeeds, it returns S_OK. Otherwise, it returns an HRESULT error code.</returns>
+    [PreserveSig]
+    new HRESULT GetDisplayName(SIGDN sigdnName, [Out, MarshalAs(UnmanagedType.LPWStr)] out string? ppszName);
 
     /// <summary>
     /// Gets a requested set of attributes of the IShellItem object.

@@ -17,6 +17,11 @@ Main features
  - **Hover the mouse** over the application window button **to show the live thumbnail** of the window
  - **Drag and drop** (using mouse and left button) the application window buttons **to reorder** them. You can reorder the same application windows ("within group") or the whole applications ("groups")
  - **Right click** on the application window button for the context menu with possibility to **close the window**, **start a new application instance** or **launch** the (recent) **item or task from JumpList**.
+ - Click on  the **search** icon and search for the text in window caption and name of pinned or installed application.
+   - Click on the item in the search result to switch to window or launch the app. 
+   - Press `ESC` key to clear the search text. When the search text is empty, it will close the search
+   - Press `Enter` key to "execute" the search result shown in bold. `Up`, `Down`, `PgUp`, `PgDn` keys will move the selection
+   - Use `w:` prefix to search in windows only and `a:` prefix to search the applications only
  - Toggle the **settings panel** using the **`Gear` icon**.
    - **Set the docking edge** (top, bottom, left, right)
    - **Choose the monitor** where to display the `AppSwitcherBar`
@@ -69,6 +74,16 @@ Right mouse button click on the button representing a window, opens the context 
 When the `JumpList` feature flag is set (true by default) and the application provides JumpList, its items are also added to the context menu and can be used to launch the documents or tasks as defined by the application.
 
 ![JumpList menu](doc/img/JumpList.png)
+
+Click to the search icon to open the search box. Type the text to search for within the window captions and within the names of pinned and installed applications. The search results are presented as you type. Click on the result item to switch to window or launch the application. The search is case insensitive and it's possible to limit the search to windows only using the `w:` prefix in the search text. Prefix `a:` limits the search to applications only. Use `ESC` key to clean the search text. When the search text is empty, `ESC` will close the search.
+
+![JumpList menu](doc/img/Search.png)
+
+The first search result is by default selected and marked with bold caption. Press `Enter` to execute the selected (bold) result the same way as the click will do. The selection can be moved `Up` and `Down` using the arrow keys. When using `PgUp` or `PgDn`, the selection will move to the previous/next category.
+
+The search functionality can be disabled using the `AllowSearch` setting. The settings also allow to set the `SearchResultPanelWidth` and number of items per category (`SearchListCategoryLimit`).
+
+
 
 Use the "X" icon to close the application and restore the content area.
 
@@ -138,6 +153,10 @@ Besides the runtime configuration described above, it's possible to adjust the a
     "JumpListCategoryLimit": 10,
     "JumpListUseTempFiles": false,
 
+    "AllowSearch": true,
+    "SearchListCategoryLimit": 5,
+    "SearchResultPanelWidth": 400,
+
     "FeatureFlags": {
       "JumpList": true,
       "RunOnWindowsStartup": true,
@@ -189,8 +208,12 @@ Besides the runtime configuration described above, it's possible to adjust the a
 - `InvertWhiteIcons` - `AppSwitcherBar` uses light WPF theme. When the host Windows are set to dark theme, some icons provided by applications are in shadows of white (different opacity to be exact) that might be hard to see on the light background. When this option is on, `AppSwitcherBar` tries to identify "all white" icons and invert the to black for better visual experience.
 - `JumpListCategoryLimit` - The maximum number of items in individual JumpList categories except `Tasks`.
 - `JumpListUseTempFiles` - Flag whether to extract the links (.lnk) from JumpLists to temporary files and read properties from them. Otherwise the in-memory processing is used.
+- `AllowSearch` - Flag whether to allow the search functionality.
+- `SearchListCategoryLimit` - Maximum number of items in single category when presenting the search results
+- `SearchResultPanelWidth` - Width of the panel presenting the search results
 - `FeatureFlags` - Section used to configure (and allow/block) the experimental features or work in progress.
   - `JumpList` - Enable/Disable JumpList functionality.
+  - `JumpListSvcVersion` - `JumpListService` version selector. `JumpListService2` (`"JumpListSvcVersion":2`) is used by default. Use `"JumpListSvcVersion":1` to switch to legacy `JumpListService`.
   - `RunOnWindowsStartup` - Enable/Disable functionality manipulating the Windows startup link for `AppSwitcherBar`. Use `AllowRunOnWindowsStartup` setting to hide the configuration option, use the feature flag to use the dummy implementation. This is probably gonna be used during the development only
   - `AnonymizeWindows` - Enable/Disable anonymization of window captions in buttons. This used when making the app screen shots 
   - `UseApplicationResolver` - Enable/Disable using the undocumented win32 api to get the AppId
@@ -278,7 +301,8 @@ When the popup is closed, `DwmUnregisterThumbnail` function is called to stop re
 Application User Model ID (aka AUMID, AppId or Application ID) is an identifier used by Windows for grouping the buttons in taskbar. It's also key identifier of the modern applications (UWP/Windows Store apps). `AppSwitcherBar` also use AppId for grouping as well as for other functionality like launching the applications from context menu, or retrieving the JumpLists.
 Modern applications use the AppIds like `Microsoft.WindowsCalculator_8wekyb3d8bbwe!App` and it serves as the identifier or application (package). Classic desktop application sometimes provide explicit custom AppId like `Microsoft.Office.EXCEL.EXE.15`, `Chrome` or `com.squirrel.Postman.Postman` however the path to the executable is used as AppId for the most of them. To keep it a bit more complicated, the path part corresponding to known system folder (for example Program Files) can be represented by [GUID of known folder](https://docs.microsoft.com/en-us/windows/win32/shell/knownfolderid) like `{6D809377-6AF0-444B-8957-A3773F02200E}\Altova\UModel2021\UModel.exe`. For some applications, the auto generated AppId is used, although it seems its value is somehow stable across Windows installations - for example `Microsoft.AutoGenerated.{BB044BFD-25B7-2FAA-22A8-6371A93E0456}` for EventViewer. Microsoft provides some general [guidance how to find the AppId](https://docs.microsoft.com/en-us/windows/configuration/find-the-application-user-model-id-of-an-installed-app).
 
-   
+When the feature flag `UseApplicationResolver` is set, `AppSwitcherBar` will try to use the the Windows API to provide the AppId using the method `GetAppIDForWindow' of COM class `CApplicationResolver` implementing `IApplicationResolver` interface. This interface is not documented, I found some hints at [https://a-whiter.livejournal.com/1266.html](https://a-whiter.livejournal.com/1266.html). The interface might change or not work as expected, so in case of problems, it can be switched off using the feature flag. When the API is not used or doesn't get the AppId, the following logic applies.
+
 A few applications publish the AppId at the window level. It can be retrieved from window Property Store as a property with `PKEY_AppUserModel_ID` key. For some modern applications, the AppId can be retrieved at process level using kernel's API `GetApplicationUserModelId`, but for the most applications, `AppSwitcherBar` gets the AppId using the help of installed applications list. It enumerates the shell items in `AppsFolder` on startup (at background) and tries to get the AppId from shell item Property Store (`PKEY_AppUserModel_ID`). The information is stored in `InstalledApplications` collection together with the application executable path. When `AppSwitcherBar` needs to get AppId for application window and it's not provided explicitly for window or process, it get's the application executable (using `Kernel32.QueryFullProcessImageName`) and tries to map is to installed application information. The application executable itself is used as fallback value for AppId. When needed or for some special cases, the AppIds can be provided in `AppSwitcherBar` configuration.
 
 ### Context Menus and JumpLists ###
@@ -299,7 +323,9 @@ var customDestinationsFileExists = File.Exists(customDestinationsFile);
 var automaticDestinationsFileExists = File.Exists(automaticDestinationsFile);
 ```
 
-The automatic destinations are stored in Compound File implementation of [Structured Storage](https://docs.microsoft.com/en-us/windows/win32/stg/structured-storage-start-page) that is widely used in COM/OLE programming. .NET provides some support of Compound Files in `System.IO.Packaging.StorageInfo`, although the access to the root storage (let's say the "entry point to file") is "hidden" in `System.IO.Packaging.StorageRoot` .NET internal class, but can still be used with a dirty reflection magic. The storage contains set of streams. One, called `DestList`, contains details about the items and so far is not that much interesting unless we want to access the information whether an item is pinned. I do ignore the stream as I didn't get reliable understanding of the format that is not documented.
+`JumpListService2:IJumpListService` uses undocumented Windows API `IAutomaticDestinationList2` to read the automatic destinations in proper order as well as information about pinned items. It's inspired by [Open-Shell-Menu project](https://github.com/Open-Shell/Open-Shell-Menu). Also merging of the automatic and custom destinations (categories and items) is updated to mirror Windows behavior. 
+
+Legacy `JumpListService:IJumplistService` reads the automatic destinations from file. The automatic destinations are stored in Compound File implementation of [Structured Storage](https://docs.microsoft.com/en-us/windows/win32/stg/structured-storage-start-page) that is widely used in COM/OLE programming. .NET provides some support of Compound Files in `System.IO.Packaging.StorageInfo`, although the access to the root storage (let's say the "entry point to file") is "hidden" in `System.IO.Packaging.StorageRoot` .NET internal class, but can still be used with a dirty reflection magic. The storage contains set of streams. One, called `DestList`, contains details about the items and so far is not that much interesting unless we want to access the information whether an item is pinned. I do ignore the stream as I didn't get reliable understanding of the format that is not documented.
 The other streams with numbered names represent individual items that are simply serialized shortcuts (link, `.lnk`) files.
 
 The custom destinations are stored in files containing the information about categories (recent/frequent, tasks, custom,...) and containing items. Although the file format is not documented, it was quite easy to understand (see `JumpListService.ParseCustomDestinations` method for details) and it will also provide the serialized link files.
@@ -348,8 +374,7 @@ As mentioned above, the interface is not public and documented (and it's version
 
 ## Additional (future) Feature Ideas ##
   - Optional auto hide functionality of appbar
-  - Search and switch to application by title (from enumerated windows)
-  - Search and launch application by name (from installed applications)
+  - Support for localization
   - Support for system light and dark schemes
 
 ## Credits & Sources Used ##

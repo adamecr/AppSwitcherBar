@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
 // ReSharper disable CommentTypo
 
 namespace net.adamec.ui.AppSwitcherBar.Dto;
@@ -23,11 +26,17 @@ public class InstalledApplications
     private readonly Dictionary<string, InstalledApplication> appsByPackageAppId = new();
 
     /// <summary>
+    /// All installed applications
+    /// </summary>
+    private readonly List<InstalledApplication> allApps = new();
+
+    /// <summary>
     /// Add <paramref name="app"/> into the container
     /// </summary>
     /// <param name="app">Information about installed application</param>
     public void Add(InstalledApplication app)
     {
+        allApps.Add(app);
         if (!string.IsNullOrEmpty(app.AppUserModelId)) appsByAppId[app.AppUserModelId.ToLowerInvariant()] = app;
         if (!string.IsNullOrEmpty(app.Executable)) appsByAppLink[app.Executable.ToLowerInvariant()] = app;
         if (!string.IsNullOrEmpty(app.ShellProperties.ApplicationUserModelId)) appsByPackageAppId[app.ShellProperties.ApplicationUserModelId] = app;
@@ -38,6 +47,7 @@ public class InstalledApplications
     /// </summary>
     public void Clear()
     {
+        allApps.Clear();
         appsByAppId.Clear();
         appsByAppLink.Clear();
         appsByPackageAppId.Clear();
@@ -91,5 +101,21 @@ public class InstalledApplications
     public string? GetPackageFullName(string appId)
     {
         return appsByPackageAppId.TryGetValue(appId, out var application) ? application.ShellProperties.PackageFullName : null;
+    }
+
+    /// <summary>
+    /// Returns installed applications where <see cref="InstalledApplication.Name"/> contains <see cref="text"/>
+    /// </summary>
+    /// <param name="text">Text to search for</param>
+    /// <returns>Installed applications where <see cref="InstalledApplication.Name"/> contains <see cref="text"/></returns> or empty array
+    public InstalledApplication[] SearchByName(string? text)
+    {
+        return string.IsNullOrEmpty(text) ?
+            Array.Empty<InstalledApplication>() :
+            allApps
+                .Where(a =>
+                    a.Name.Contains(text, StringComparison.InvariantCultureIgnoreCase) &&
+                    a.ShellProperties.IsApplication)
+                .ToArray();
     }
 }

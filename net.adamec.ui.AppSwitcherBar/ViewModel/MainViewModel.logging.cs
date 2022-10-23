@@ -297,7 +297,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 LogOptions);
 
         /// <summary>
-        /// Logs record (Warning) of exception thrown when starting the app from context menu
+        /// Logs record (Warning) of exception thrown when starting the app from context menu or search result
         /// </summary>
         /// <param name="name">Name of the application</param>
         /// <param name="ex">Exception thrown</param>

@@ -90,14 +90,24 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         public string? RelaunchDisplayName { get; init; }
 
         /// <summary>
-        /// Host environment - 0 for Desktop App, 1 for Store/UWP app
+        /// Host environment - 0 for Desktop App, 1+ for Store/UWP app
         /// </summary>
         public uint HostEnvironment { get; init; }
 
         /// <summary>
-        /// Flag whether the application is Store/UWP app (<see cref="HostEnvironment"/> is 1)
+        /// Flag whether the application is Store/UWP app (<see cref="HostEnvironment"/> is >0)
         /// </summary>
-        public bool IsStoreApp => HostEnvironment == 1;
+        public bool IsStoreApp => HostEnvironment >0;
+
+        /// <summary>
+        /// Run flags of shell item (0 means not runnable, 1 is runnable). IMPORTANT: It's also 0 for Store Apps!!!
+        /// </summary>
+        public uint RunFlags;
+
+        /// <summary>
+        /// Flag whether the shell item is an application
+        /// </summary>
+        public bool IsApplication => IsStoreApp || RunFlags > 0;
 
         /// <summary>
         /// The Shell namespace name of an item relative to a parent folder.
@@ -113,7 +123,12 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// The Shell namespace path to the target of the link item (if link)
         /// </summary>
         public string? LinkTargetParsingPath { get; init; }
-       
+
+        /// <summary>
+        /// Link arguments (if link)
+        /// </summary>
+        public string? LinkArguments { get; init; }
+
         /// <summary>
         /// Package family name if package
         /// </summary>
