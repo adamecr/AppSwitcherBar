@@ -1,7 +1,9 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using net.adamec.ui.AppSwitcherBar.Dto;
 
 namespace net.adamec.ui.AppSwitcherBar.Wpf
@@ -51,7 +53,7 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
             typeof(ICommand),
             typeof(AppButton),
             new FrameworkPropertyMetadata(null));
-     
+
         /// <summary>
         /// Command to be called (from popup to model view) to launch the pinned application
         /// </summary>
@@ -138,6 +140,44 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
         // ReSharper disable once UnusedMember.Global
         public static readonly DependencyProperty IsDragAndDropTargetProperty = IsDragAndDropTargetPropertyKey.DependencyProperty;
 
+
+        /// <summary>
+        /// Delay (in milliseconds) before the thumbnail is shown
+        /// </summary>
+        public int ThumbnailDelay
+        {
+            get => (int)GetValue(ThumbnailDelayProperty);
+            set => SetValue(ThumbnailDelayProperty, value);
+        }
+
+        /// <summary>
+        /// Delay (in milliseconds) before the thumbnail is shown
+        /// </summary>
+        public static readonly DependencyProperty ThumbnailDelayProperty = DependencyProperty.Register(
+            nameof(ThumbnailDelay),
+            typeof(int),
+            typeof(AppButton),
+            new FrameworkPropertyMetadata(400));
+
+        /// <summary>
+        /// Timer used to delay thumbnail show
+        /// </summary>
+        private DispatcherTimer? thumbnailTimer;
+        /// <summary>
+        /// Timer used to delay thumbnail show.
+        /// Existing timer is reset when a value is set
+        /// </summary>
+        private DispatcherTimer? ThumbnailTimer
+        {
+            get => thumbnailTimer;
+            set
+            {
+                ResetThumbnailTimer();
+                thumbnailTimer = value;
+            }
+        }
+
+
         /// <summary>
         /// Called when the context menu is opening
         /// </summary>
@@ -178,6 +218,7 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
         /// </summary>
         public void HideThumbnail()
         {
+            ResetThumbnailTimer();
             CanShowThumbnail = false;
         }
 
@@ -188,7 +229,35 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
         protected override void OnMouseEnter(MouseEventArgs e)
         {
             base.OnMouseEnter(e);
-            CanShowThumbnail = IsThumbnailAllowed;
+            if (IsThumbnailAllowed)
+            {
+                if (ThumbnailDelay > 0)
+                {
+                    ThumbnailTimer = new DispatcherTimer(DispatcherPriority.Normal)
+                    {
+                        Interval = TimeSpan.FromMilliseconds(ThumbnailDelay)
+                    };
+                    ThumbnailTimer.Tick += (_, _) => CanShowThumbnail = true;
+                    ThumbnailTimer.Start();
+                }
+                else
+                {
+                    CanShowThumbnail = true;
+                }
+            }
+            else
+            {
+                CanShowThumbnail = false;
+            }
+        }
+
+        /// <summary>
+        /// Resets (stops) the <see cref="thumbnailTimer"/> if exist
+        /// </summary>
+        private void ResetThumbnailTimer()
+        {
+            thumbnailTimer?.Stop();
+            thumbnailTimer = null;
         }
 
         /// <summary>

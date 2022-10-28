@@ -143,6 +143,7 @@ Besides the runtime configuration described above, it's possible to adjust the a
 
     "AppBarThumbnailWidth": 200,
     "AppBarThumbnailHeight": 120,
+    "AppBarThumbnailDelayMs": 400,
 
     "RefreshWindowInfosIntervalMs": 200,
     "CheckForIconChange": true,
@@ -202,6 +203,7 @@ Besides the runtime configuration described above, it's possible to adjust the a
 - `HideSingleWindowApps` - Flag whether to hide the applications (buttons) having only single window. When the pinned applications support is on and the application has a pin, it will be not be hiden even having a single window.
 - `AppBarThumbnailWidth` - The width of application window thumbnail
 - `AppBarThumbnailHeight` - The height of application window thumbnail
+- `AppBarThumbnailDelayMs` - Delay (in milliseconds) before the window thumbnail is shown
 - `RefreshWindowInfosIntervalMs` - The interval in milliseconds for refreshing the collection and status of the application windows 
 - `CheckForIconChange` - Flag whether `AppSwitcherBar` periodically checks windows for an icon change or whether the icon retrieved for the first time is used. Switching it of can give some performance gain, however some applications change their icon during their runtime to signal user some state information.
 - `CheckForAppIdChange` - Flag whether `AppSwitcherBar` periodically checks windows for change of their Application ID that has an impact to grouping the buttons together. It's off by default as the runtime changes of Application ID are quite rare.

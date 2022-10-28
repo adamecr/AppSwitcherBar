@@ -50,6 +50,12 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// Minimal height of application bar  (default is 50)
         /// </summary>
         public int AppBarMinHeight { get; set; } = 50;
+
+        /// <summary>
+        /// Delay (in milliseconds) before the window (task bar application) thumbnail is shown (default is 400)
+        /// </summary>
+        public int AppBarThumbnailDelayMs { get; set; } = 400;
+
         /// <summary>
         /// Flag whether to redraw the application bar on resize drag (true) or just when the drag is completed (false) (default is true)
         /// </summary>

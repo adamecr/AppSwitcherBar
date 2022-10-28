@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -440,7 +441,9 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
         {
             base.OnDpiChanged(oldDpi, newDpi);
-
+#if DEBUG
+            Debug.WriteLine($"DPI Change: {oldDpi.DpiScaleX},{oldDpi.DpiScaleY} to {newDpi.DpiScaleX},{newDpi.DpiScaleY}");
+#endif
             AppBarUpdate();
         }
 

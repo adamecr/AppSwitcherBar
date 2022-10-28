@@ -363,8 +363,9 @@
                         <wpf:AppButton Margin="{Binding Settings.AppBarButtonMargin, ElementName=Root}"
                                              ButtonInfo="{Binding}"
                                              BuildContextMenuCommand="{Binding DataContext.BuildContextMenuCommand, ElementName=Root}"
-                                             ToolTip="{Binding Path=Title}"
-                                             VerticalContentAlignment="Center" HorizontalContentAlignment="Left">
+                                             ToolTip="{Binding Path=Title}" 
+                                             VerticalContentAlignment="Center" HorizontalContentAlignment="Left"
+                                             ThumbnailDelay="{Binding Settings.AppBarThumbnailDelayMs, ElementName=Root}">
                             <wpf:AppButton.Style>
                                 <Style TargetType="{x:Type wpf:AppButton}">
                                     <Style.Triggers>
@@ -421,6 +422,18 @@
                                     <wpf:ThumbnailPopup.Style>
                                         <Style TargetType="wpf:ThumbnailPopup">
                                             <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                                                    <Setter Property="Placement" Value="Right" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                                                    <Setter Property="Placement" Value="Left" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                                                    <Setter Property="Placement" Value="Bottom" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                                                    <Setter Property="Placement" Value="Top" />
+                                                </DataTrigger>
                                                 <DataTrigger Binding="{Binding Path=Type}" Value="{x:Type dto:WndInfo}">
                                                     <Setter Property="SourceHwnd" Value="{Binding Path=Self.(dto:WndInfo.Hwnd)}" />
                                                     <Setter Property="IsOpen" Value="{Binding CanShowThumbnail, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type wpf:AppButton}}}"/>

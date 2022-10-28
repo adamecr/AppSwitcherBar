@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased ##
 
+## [1.3.1] - 2022-10-28 ##
+### Fixed ###
+- [Thumbnail popup in vertical mode](https://github.com/adamecr/AppSwitcherBar/issues/3) - thumbnail popup placement is now set based on the appbar position (orientation)
+
+### Added ###
+- Thumnbnail popup is shown with configurable delay as proposed in [Thumbnail popup in vertical mode](https://github.com/adamecr/AppSwitcherBar/issues/3)
+- Application setting `AppBarThumbnailDelayMs`
+
 ## [1.3.0] - 2022-10-23 ##
 ### Added ###
 - **Search support** - allows to search by window caption, pinned application name and installed application name. The search results are presented in the list and allow the user to launch them.
@@ -70,6 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added ###
 - Initial application release
 
+[1.3.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.1.0...v1.2.0

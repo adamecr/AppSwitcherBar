@@ -77,6 +77,11 @@ public interface IAppSettings
     int AppBarThumbnailHeight { get; }
 
     /// <summary>
+    /// Delay (in milliseconds) before the window (task bar application) thumbnail is shown
+    /// </summary>
+    int AppBarThumbnailDelayMs { get; }
+
+    /// <summary>
     /// Refresh interval (in milliseconds) when retrieving the list of windows (task bar applications)
     /// </summary>
     int RefreshWindowInfosIntervalMs { get; }
