@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using net.adamec.ui.AppSwitcherBar.Dto;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeClasses;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeConstants;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces;
@@ -235,6 +236,19 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.Shell
                 return shellItem;
 
             return null;
+        }
+
+        /// <summary>
+        /// Displays or hides the desktop.
+        /// </summary>
+        internal static void ToggleDesktop()
+        {
+            var shell = new CShell();
+            // ReSharper disable once SuspiciousTypeConversion.Global
+            if (shell is IShellDispatch6 shellDispatch)
+            {
+                shellDispatch.ToggleDesktop();
+            }
         }
     }
 }

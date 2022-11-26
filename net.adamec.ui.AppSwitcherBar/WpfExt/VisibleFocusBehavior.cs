@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace net.adamec.ui.AppSwitcherBar.Wpf
+namespace net.adamec.ui.AppSwitcherBar.WpfExt
 {
     /// <summary>
     /// Behavior allowing to set focus of <see cref="UIElement"/> when become visible

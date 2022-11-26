@@ -150,6 +150,11 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         public string? PackageIconResource { get; init; }
 
         /// <summary>
+        /// Folder in Windows Start menu
+        /// </summary>
+        public string? TileSuiteDisplayName { get; init; }
+
+        /// <summary>
         /// Get the string representation of the object
         /// </summary>
         /// <returns>String representation of the object</returns>

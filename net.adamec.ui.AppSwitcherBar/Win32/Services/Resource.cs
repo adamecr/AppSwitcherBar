@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
@@ -90,7 +92,29 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
         /// <returns>Inverted bitmap if consist of white pixels only otherwise the <paramref name="source"/> bitmap is returned</returns>
         public static BitmapSource? InvertBitmapIfWhiteOnly(BitmapSource? source)
         {
+            return InvertBitmapIfWhiteOrBlackOnly(source, true);
+        }
+
+        /// <summary>
+        /// Inverts the bitmap in case it consist of black pixels (with different aplha) only
+        /// </summary>
+        /// <param name="source">Bitmap to check and invert if black only</param>
+        /// <returns>Inverted bitmap if consist of black pixels only otherwise the <paramref name="source"/> bitmap is returned</returns>
+        public static BitmapSource? InvertBitmapIfBlackOnly(BitmapSource? source)
+        {
+            return InvertBitmapIfWhiteOrBlackOnly(source, false);
+        }
+
+        /// <summary>
+        /// Inverts the bitmap in case it consist of white or black pixels (with different aplha) only
+        /// </summary>
+        /// <param name="source">Bitmap to check and invert if applicable</param>
+        /// <param name="checkWhite">If true, the <paramref name="source"/> bitmap is checked for white-only fixels, if false, it's checked for black-only pixels</param>
+        /// <returns>Inverted bitmap if consist of white or black pixels only otherwise the <paramref name="source"/> bitmap is returned</returns>
+        private static BitmapSource? InvertBitmapIfWhiteOrBlackOnly(BitmapSource? source, bool checkWhite)
+        {
             const int whiteThreshold = 245;
+            const int blackThreshold = 5;
 
             if (source == null) return null;
             // Calculate stride of source
@@ -103,21 +127,28 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
             // Copy source image pixels to the data array
             source.CopyPixels(data, stride, 0);
 
-            //Check if is white only
-            var isWhiteOnly = true;
-
-            for (var i = 0; i < length; i += 4)
+            //Check if is white/black only
+           for (var i = 0; i < length; i += 4)
             {
                 var r = data[i];
                 var g = data[i + 1];
                 var b = data[i + 2];
                 var a = data[i + 3];
-                if (a != 0 && (r < whiteThreshold | g < whiteThreshold | b < whiteThreshold)) isWhiteOnly = false;
+                switch (checkWhite)
+                {
+                    case true when a != 0 && (r < whiteThreshold | g < whiteThreshold | b < whiteThreshold):
+                        return  source;
+                    case false when a != 0 && (r > blackThreshold | g > blackThreshold | b > blackThreshold):
+                        return source;
+                }
             }
 
-            if (!isWhiteOnly) return source;
-            //invert
-            for (var i = 0; i < length; i += 4)
+           if (source.Format == PixelFormats.Indexed1 || source.Format == PixelFormats.Indexed2 ||
+               source.Format == PixelFormats.Indexed4 || source.Format == PixelFormats.Indexed8)
+               return source; //it's palette. Palette change not implemented
+
+                //invert
+                for (var i = 0; i < length; i += 4)
             {
                 data[i] = (byte)(255 - data[i]); //R
                 data[i + 1] = (byte)(255 - data[i + 1]); //G

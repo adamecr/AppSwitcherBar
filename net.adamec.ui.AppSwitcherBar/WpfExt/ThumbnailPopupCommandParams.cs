@@ -1,7 +1,7 @@
 ﻿using System;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
 
-namespace net.adamec.ui.AppSwitcherBar.Wpf
+namespace net.adamec.ui.AppSwitcherBar.WpfExt
 {
     /// <summary>
     /// Thumbnail popup command parameters

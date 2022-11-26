@@ -76,7 +76,8 @@ internal static class ShellItemExtensions
             LinkTargetParsingPath = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Link_TargetParsingPath),
             LinkArguments = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Link_Arguments),
             PackageIconResource = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath),
-            RunFlags = shellItem.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_RunFlags)
+            RunFlags = shellItem.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_RunFlags),
+            TileSuiteDisplayName = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SuiteDisplayName)
         };
 
         return retVal;

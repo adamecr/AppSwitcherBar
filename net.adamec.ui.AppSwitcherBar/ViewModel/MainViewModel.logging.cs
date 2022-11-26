@@ -31,6 +31,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         // 1xxx - JumpList Service (19xx Errors/Exceptions)
         // 2xxx - Startup Service (29xx Errors/Exceptions)
         // 3xxx - AppBarWindow (39xx Errors/Exceptions)
+        // 4xxx - BackgroundData Service (49xx Errors/Exceptions)
 
         /// <summary>
         /// Log definition options
@@ -95,36 +96,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             }
         }
 
-        //----------------------------------------------
-        // 103 LogInstalledAppInfo
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogInstalledAppInfo
-        /// </summary>
-        private static readonly Action<ILogger, string, string, bool, string, Exception?> __LogInstalledAppInfoDefinition =
-            LoggerMessage.Define<string, string, bool, string>(
-                LogLevel.Debug,
-                new EventId(103, nameof(LogInstalledAppInfo)),
-                "Installed application {appName}, AUMI:{appUserModelId}, Icon:{hasIcon}, Link:{link}",
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Debug) about retrieved information about the installed application
-        /// </summary>
-        /// <param name="appName">Name of the application</param>
-        /// <param name="appUserModelId">AUMI of the application</param>
-        /// <param name="hasIcon">Flag whether there is an icon source available</param>
-        /// <param name="link">Link to application executable</param>
-
-        private void LogInstalledAppInfo(string appName, string appUserModelId, bool hasIcon, string link)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                __LogInstalledAppInfoDefinition(logger, appName, appUserModelId, hasIcon, link, null);
-
-            }
-        }
+        
 
         //----------------------------------------------
         // 104 LogEnumeratedWindowInfo
@@ -210,50 +182,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             }
         }
 
-        //----------------------------------------------
-        // 301 LogBackgroundDataInitTelemetry (Info)
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message format for LogBackgroundDataInitTelemetry
-        /// </summary>
-        private static readonly string __LogBackgroundDataInitTelemetryFormatString =
-            "Finished retrieving background data at {timestampFinished}. Success:{isSuccess}. Duration {duration} (Installed Apps:{durationInstalledApps}), Result:{resultMsg}";
-
-        /// <summary>
-        /// Logger message definition for LogBackgroundDataInitTelemetry (Info)
-        /// </summary>
-        private static readonly Action<ILogger, DateTime, bool, int, int, string, Exception?> __LogBackgroundDataInitTelemetryInfoDefinition =
-            LoggerMessage.Define<DateTime, bool, int, int, string>(
-                LogLevel.Information,
-                new EventId(301, nameof(LogBackgroundDataInitTelemetry)),
-                __LogBackgroundDataInitTelemetryFormatString,
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Information or error) after finishing the data retrieval
-        /// </summary>
-        /// <param name="level">Required log record level</param>
-        /// <param name="timestampFinished">Timestamp when the background data retrieval finished</param>
-        /// <param name="isSuccess">Flag whether the background data retrieval finished successfully</param>
-        /// <param name="resultMsg">Result message - contains OK or error message</param>
-        /// <param name="duration">Total duration of background data retrieval (in ms)</param>
-        /// <param name="durationInstalledApps">Duration of installed applications data retrieval (in ms)</param>
-        private void LogBackgroundDataInitTelemetry(LogLevel level, DateTime timestampFinished, bool isSuccess, string resultMsg, int duration, int durationInstalledApps)
-        {
-            if (!logger.IsEnabled(level)) return;
-
-            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-            switch (level)
-            {
-                case LogLevel.Information:
-                    __LogBackgroundDataInitTelemetryInfoDefinition(logger, timestampFinished, isSuccess, duration, durationInstalledApps, resultMsg, null);
-                    break;
-                case LogLevel.Error:
-                    __LogBackgroundDataInitTelemetryDefinition(logger, timestampFinished, isSuccess, duration, durationInstalledApps, resultMsg, null);
-                    break;
-            }
-        }
+       
 
         //----------------------------------------------
         // 900 LogWrongCommandParameter
@@ -309,21 +238,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             }
         }
 
-        //----------------------------------------------
-        // 902 LogBackgroundDataInitTelemetry (Error)
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogBackgroundDataInitTelemetry (Error)
-        /// </summary>
-        private static readonly Action<ILogger, DateTime, bool, int, int, string, Exception?> __LogBackgroundDataInitTelemetryDefinition =
-            LoggerMessage.Define<DateTime, bool, int, int, string>(
-                LogLevel.Error,
-                new EventId(902, nameof(LogBackgroundDataInitTelemetry)),
-                __LogBackgroundDataInitTelemetryFormatString,
-                LogOptions);
-
-        //Shares LogBackgroundDataInitTelemetry method
+        
 
         #endregion
 

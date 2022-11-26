@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using net.adamec.ui.AppSwitcherBar.Wpf;
+using net.adamec.ui.AppSwitcherBar.WpfExt;
 
 namespace net.adamec.ui.AppSwitcherBar.Dto.Search;
 
@@ -51,6 +51,10 @@ public abstract class SearchResultItem:INotifyPropertyChanged
         /// Installed application
         /// </summary>
         InstalledApplication,
+        /// <summary>
+        /// Installed document ("non-application")
+        /// </summary>
+        InstalledDocument,
         /// <summary>
         /// Separator
         /// </summary>

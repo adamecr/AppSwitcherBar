@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
-namespace net.adamec.ui.AppSwitcherBar.Wpf
+namespace net.adamec.ui.AppSwitcherBar.WpfExt
 {
     /// <summary>
     /// Helper utilities for WPF
@@ -59,6 +60,10 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
 
             while (true)
             {
+                if (item is not Visual && item is not Visual3D)
+                {
+                    return null; //TODO check Run
+                }
                 var parentObject = VisualTreeHelper.GetParent(item);
                 switch (parentObject)
                 {
@@ -94,6 +99,31 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
             return list;
         }
 
+        /// <summary>
+        /// Gets the first child (direct and indirect) having <typeparamref name="TChildType"/> and matching the <paramref name="selector"/>
+        /// </summary>
+        /// <typeparam name="TChildType">Type of child to look for</typeparam>
+        /// <param name="item">Item to get the child for</param>
+        /// <param name="selector">Child selector</param>
+        /// <returns>Child (direct and indirect) having <typeparamref name="TChildType"/> and matching the <paramref name="selector"/> or null if none found</returns>
+        public static TChildType? FirstOrDefaultChild<TChildType>(DependencyObject item, Func<TChildType, bool> selector) where TChildType : DependencyObject
+        {
+            for (var count = 0; count < VisualTreeHelper.GetChildrenCount(item); count++)
+            {
+                var child = VisualTreeHelper.GetChild(item, count);
+                if (child is TChildType tChild && selector(tChild))
+                {
+                    return tChild;
+                }
+                var ret = FirstOrDefaultChild(child, selector);
+                if (ret != null)
+                {
+                    //found it
+                    return ret;
+                }
+            }
+            return null;
+        }
 
         /// <summary>
         /// <see cref="int"/> extension method.

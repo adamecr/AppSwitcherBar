@@ -5,15 +5,16 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
+
 // ReSharper disable IdentifierTypo
 // ReSharper disable CommentTypo
 
-namespace net.adamec.ui.AppSwitcherBar.Wpf
+namespace net.adamec.ui.AppSwitcherBar.WpfExt
 {
     /// <summary>
     /// Customized <see cref="Popup"/> used to show the window thumbnails (provided by DWM API)
     /// </summary>
-    internal class ThumbnailPopup : Popup
+    public class ThumbnailPopup : Popup
     {
 
         /// <summary>

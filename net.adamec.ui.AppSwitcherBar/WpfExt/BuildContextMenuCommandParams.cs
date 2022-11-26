@@ -1,6 +1,6 @@
 ﻿using net.adamec.ui.AppSwitcherBar.Dto;
 
-namespace net.adamec.ui.AppSwitcherBar.Wpf;
+namespace net.adamec.ui.AppSwitcherBar.WpfExt;
 
 /// <summary>
 /// <see cref="AppButton.BuildContextMenuCommand"/> parameters

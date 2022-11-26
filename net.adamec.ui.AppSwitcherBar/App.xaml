@@ -1,4 +1,32 @@
 ﻿<Application x:Class="net.adamec.ui.AppSwitcherBar.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:viewModel="clr-namespace:net.adamec.ui.AppSwitcherBar.ViewModel"
+             xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+                <ResourceDictionary>
+                    <viewModel:ViewModelLocator x:Key="ViewModelLocator" />
+                    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+                    <system:String x:Key="StrMenuPopupHidePopup">Hide popup</system:String>
+                    <system:String x:Key="StrMenuPopupSearch">Search</system:String>
+                    <system:String x:Key="StrMenuPopupSettings">Settings</system:String>
+                    <system:String x:Key="StrMenuPopupColors">Colors</system:String>
+                    <system:String x:Key="StrMenuPopupApps">Applications</system:String>
+                    <system:String x:Key="StrMenuPopupToggleDesktop">Toggle desktop</system:String>
+                    <system:String x:Key="StrMenuPopupToggleTheme">Toggle theme</system:String>
+                    <system:String x:Key="StrMenuPopupExit">Exit app</system:String>
+                    <system:String x:Key="StrMenuPopupSettingsRefresh">Refresh</system:String>
+                    <system:String x:Key="StrMenuPopupSettingsRunOnStartup">Run on Win start</system:String>
+                    <system:String x:Key="StrMenuPopupSettingsAutoSize">Auto size</system:String>
+                </ResourceDictionary>
+
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>

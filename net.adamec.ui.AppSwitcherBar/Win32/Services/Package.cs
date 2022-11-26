@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows.Controls;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
@@ -33,15 +34,16 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
         /// As the package can contain asset in different sizes, scales and contrasts, it will try to get the best match:
         ///  The target size closest to <paramref name="size"/> (the first bigger or the last smaller)
         ///  The highest scale
-        ///  White or standard contrast
+        ///  White/Black or standard contrast
         /// </summary>
         /// <param name="packageFullName">Full name of package</param>
         /// <param name="assetName">Name of the asset without qualifiers</param>
         /// <param name="size">Required size of the image</param>
+        /// <param name="isDarkScheme">Flag whether app uses the dark scheme (true) or light scheme (false) - used to choose white or black priority contrast</param>
         /// <returns>Full path to the image asset file with the best match, or null when no asset can be found</returns>
         [SuppressMessage("ReSharper", "CommentTypo")]
         [SuppressMessage("ReSharper", "IdentifierTypo")]
-        public static string? GetPackageImageAsset(string packageFullName, string assetName, int size)
+        public static string? GetPackageImageAsset(string packageFullName, string assetName, int size, bool isDarkScheme)
         {
             if(string.IsNullOrEmpty(packageFullName) || string.IsNullOrEmpty(assetName)) return null;
 
@@ -125,8 +127,9 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
             var candidateImages = availableImages.Where(i => i.targetSize == bestSize && i.scale == highScale).ToArray();
 
             //contrast
+            var priorityContrast = isDarkScheme ? "black" : "white";
             var candidateInfo =
-                    candidateImages.FirstOrDefault(i => i.contrast == "white") ??
+                    candidateImages.FirstOrDefault(i => i.contrast == priorityContrast) ??
                     candidateImages.FirstOrDefault(i => i.contrast == "standard") ??
                     candidateImages.FirstOrDefault(i => i.contrast == string.Empty) ??
                     candidateImages.FirstOrDefault();

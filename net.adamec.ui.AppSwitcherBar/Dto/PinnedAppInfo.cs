@@ -41,7 +41,8 @@ public class PinnedAppInfo : ButtonInfo
     /// <param name="shellProperties">Subset of shell properties</param>
     /// <param name="appId">Application ID</param>
     /// <param name="executable">Application executable</param>
-    public PinnedAppInfo(string title, int order, PinnedAppTypeEnum pinnedAppType, ShellPropertiesSubset shellProperties, string? appId,string? executable)
+    /// <param name="isDarkScheme">Flag whether app uses the dark scheme (true) or light scheme (false) - used to choose white or black priority contrast for icon</param>
+    public PinnedAppInfo(string title, int order, PinnedAppTypeEnum pinnedAppType, ShellPropertiesSubset shellProperties, string? appId,string? executable, bool isDarkScheme)
         : base(title, executable, null)
     {
         PinnedAppIndex = order;
@@ -68,7 +69,7 @@ public class PinnedAppInfo : ButtonInfo
         {
             if (shellProperties.PackageFullName == null || shellProperties.PackageIconResource == null) return;
             
-            var assetPath = Package.GetPackageImageAsset(shellProperties.PackageFullName, shellProperties.PackageIconResource, 32);
+            var assetPath = Package.GetPackageImageAsset(shellProperties.PackageFullName, shellProperties.PackageIconResource, 32, isDarkScheme);
             if (assetPath != null && File.Exists(assetPath))
             {
                 BitmapSource = new BitmapImage(new Uri(assetPath));

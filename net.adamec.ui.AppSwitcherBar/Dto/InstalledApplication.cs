@@ -17,6 +17,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Name of the installed application
         /// </summary>
         public string Name { get; }
+
         /// <summary>
         /// AppUserModel ID (AppId) of the application if available
         /// </summary>
@@ -25,7 +26,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Link to the application (executable) if available
         /// </summary>
         public string? Executable { get; }
-        
+
         /// <summary>
         /// Icon of the application if available
         /// </summary>
@@ -35,7 +36,39 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Some of the shell properties
         /// </summary>
         public ShellPropertiesSubset ShellProperties { get; }
-        
+
+        /// <summary>
+        /// Flag whether the item is runnable application
+        /// </summary>
+        public bool IsApplication { get; }
+
+        /// <summary>
+        /// Flag whether the item is virtual application - shell target
+        /// like my computer, this PC, file explorer - shell:::{guid}
+        /// the <see cref="Executable"/> should be ::{guid}
+        /// </summary>
+        private bool IsShellTarget { get; }
+
+        /// <summary>
+        /// Folder in windows Start menu (if applicable)
+        /// </summary>
+        public string? StartMenuFolder { get; }
+
+        /// <summary>
+        /// Category in the application list - first char from Folder or name if not in folder, "#" for numbers, "~" for non digit/letter
+        /// </summary>
+        public string AppListCategory { get; }
+
+        /// <summary>
+        /// Folder in the application list - empty string when not in folder
+        /// </summary>
+        public string AppListFolder { get; }
+
+        /// <summary>
+        /// Application list sort key - category+folder+name
+        /// </summary>
+        public string AppListSortKey { get; }
+
         /// <summary>
         /// CTOR
         /// </summary>
@@ -44,13 +77,38 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <param name="executable">Link to the application (executable) if available</param>
         /// <param name="iconSource">Icon of the application if available</param>
         /// <param name="shellProperties">Some of the shell properties</param>
-       public InstalledApplication(string name, string? appUserModelId, string? executable, BitmapSource? iconSource, ShellPropertiesSubset shellProperties)
+        public InstalledApplication(string name, string? appUserModelId, string? executable, BitmapSource? iconSource, ShellPropertiesSubset shellProperties)
         {
             Name = name;
             AppUserModelId = appUserModelId;
             Executable = executable;
             IconSource = iconSource;
             ShellProperties = shellProperties;
+
+            IsShellTarget = executable?.StartsWith("::{") ?? false;
+            IsApplication = shellProperties.IsApplication || IsShellTarget;
+            StartMenuFolder = shellProperties.TileSuiteDisplayName;
+
+            AppListFolder = StartMenuFolder ?? string.Empty;
+
+            var appListCategoryChar = StartMenuFolder==null? name[..1][0] : AppListFolder[..1][0];
+
+            if (char.IsLetter(appListCategoryChar))
+            {
+                AppListCategory = appListCategoryChar.ToString().ToUpper();
+            }
+            else if (char.IsDigit(appListCategoryChar))
+            {
+                AppListCategory = "#";
+            }
+            else
+            {
+                AppListCategory = "~";
+            }
+
+            
+            AppListSortKey = $"{AppListCategory}{AppListFolder}{name}";
+
         }
 
         /// <summary>
@@ -64,9 +122,28 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
                 {
                     Package.ActivateApplication(AppUserModelId, null, out _);
                 }
+                else if (IsShellTarget)
+                {
+                    if (Executable == null)
+                    {
+                        errorAction?.Invoke(new FileNotFoundException("Executable shell target is null"));
+                        return; //can't do anything
+                    }
+                    //launch 
+                    var startInfo = new ProcessStartInfo($"shell:{Executable}")
+                    {
+                        Arguments = ShellProperties.LinkArguments,
+                        UseShellExecute = true
+                    };
+                    Process.Start(startInfo);
+                }
                 else
                 {
-                    if (Executable == null || !File.Exists(Executable)) return; //can't do anything
+                    if (Executable == null || !File.Exists(Executable))
+                    {
+                        errorAction?.Invoke(new FileNotFoundException($"Executable file doesn't exist: {Executable ?? "[NULL] Executable"}"));
+                        return; //can't do anything
+                    }
                     //launch link
                     var startInfo = new ProcessStartInfo(Executable)
                     {
@@ -89,7 +166,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// <returns>String representation of the object</returns>
         public override string ToString()
         {
-            return $"Installed application {Name}, AUMI:{AppUserModelId ?? "[Unknown]"}, Icon:{(IconSource != null ? "Yes" : "No")}, Link:{Executable ?? "[N/A]"}";
+            return $"Installed application {Name}, AUMI:{AppUserModelId ?? "[Unknown]"}, IsApp:{IsApplication}, Icon:{(IconSource != null ? "Yes" : "No")}, Link:{Executable ?? "[N/A]"}";
         }
     }
 }

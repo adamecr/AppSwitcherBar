@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
-using net.adamec.ui.AppSwitcherBar.Wpf;
+using net.adamec.ui.AppSwitcherBar.WpfExt;
 using static net.adamec.ui.AppSwitcherBar.Win32.NativeConstants.Win32Consts;
 // ReSharper disable CommentTypo
 // ReSharper disable StringLiteralTypo
@@ -203,7 +204,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// Appbar dock mode
         /// </summary>
         public static readonly DependencyProperty DockModeProperty = DependencyProperty.Register(
-            "DockMode",
+            nameof(DockMode),
             typeof(AppBarDockMode),
             typeof(AppBarWindow),
             new FrameworkPropertyMetadata(AppBarDockMode.Bottom, DockLocationOrSizeChanged));
@@ -243,6 +244,10 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             typeof(AppBarWindow),
             new FrameworkPropertyMetadata(true, DockLocationOrSizeChanged));
 
+        /// <summary>
+        /// Flag that the autosize should be performed after <see cref="IsAutoSized"/> has been set
+        /// </summary>
+        private bool forceAutosize;
 
         /// <summary>
         /// App bar width when docked vertically
@@ -317,8 +322,13 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// </summary>
         /// <param name="target"><see cref="UIElement"/> to set the <see cref="BarAutoSizeProperty"/> value to</param>
         /// <param name="value">Value of <see cref="BarAutoSizeProperty"/> for given <paramref name="target"/></param>
-        public static void SetBarAutoSize(UIElement target, AppBarAutoSizeElement value) => target.SetValue(BarAutoSizeProperty, value);
+        public static void SetBarAutoSize(UIElement? target, AppBarAutoSizeElement value) => target?.SetValue(BarAutoSizeProperty, value);
 
+        /// <summary>
+        /// Command requesting to build the close the application
+        /// </summary>
+        public ICommand CloseAppBarCommand { get; }
+        
         /// <summary>
         /// CTOR - used by XAML designer
         /// </summary>
@@ -332,6 +342,8 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
 
             //use design time settings
             Settings = AppSettings.DesignTimeAppSettings;
+
+            CloseAppBarCommand = new RelayCommand(Close);
         }
         /// <summary>
         /// CTOR
@@ -356,6 +368,8 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.NoResize;
             Topmost = true;
+
+            CloseAppBarCommand = new RelayCommand(Close);
         }
         #region Dependency properties change handlers
         /// <summary>
@@ -406,6 +420,11 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         private static void DockLocationOrSizeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var appBarWindow = (AppBarWindow)d;
+
+            if (e.Property == IsAutoSizedProperty && e.NewValue is true)
+            {
+                appBarWindow.forceAutosize = true;
+            }
 
             if (appBarWindow.IsAppBarRegistered)
             {
@@ -809,7 +828,7 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
         /// <param name="sizeAddElements">Elements to "add" to calculated size</param>
         private void DoAutoSize(FrameworkElement sizeMeasureElement, IEnumerable<FrameworkElement> sizeAddElements)
         {
-            if (!IsAutoSized) return; //auto size is not enables
+            if (!IsAutoSized) return; //auto size is not enabled
 
             //check whether the size of measured element "significantly" changed
             const int sizeBuffer = 2;
@@ -830,8 +849,8 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
                 sizeMeasureElementHeight = height;
             }
 
-            if (!isDirty) return; //no size change
-
+            if (!isDirty && !forceAutosize) return; //no size change
+            
             //calculate the target size
             // - size of measured element + margins of "containers" up to the visual tree + sum of sizes of "side/sibling" elements marked with "Add" property
             var targetSize = (int)(IsVertical ?
@@ -842,15 +861,17 @@ namespace net.adamec.ui.AppSwitcherBar.AppBar
             //apply a new size when needed
             if (IsVertical)
             {
-                if (Math.Abs(DockedWidth - targetSize) >= sizeBuffer)
+                if (Math.Abs(DockedWidth - targetSize) >= sizeBuffer || forceAutosize)
                 {
+                    forceAutosize = false;
                     DockedWidth = targetSize + sizeBuffer;
                 }
             }
             else
             {
-                if (Math.Abs(DockedHeight - targetSize) >= sizeBuffer)
+                if (Math.Abs(DockedHeight - targetSize) >= sizeBuffer || forceAutosize)
                 {
+                    forceAutosize = false;
                     DockedHeight = targetSize + sizeBuffer;
                 }
             }

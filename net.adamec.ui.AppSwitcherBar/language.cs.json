@@ -1,0 +1,37 @@
+{
+  "Language": {
+    "Translations": {
+      "MenuPopupHidePopup": "Zavřít menu",
+      "MenuPopupSearch": "Vzhledávání",
+      "MenuPopupSettings": "Nastavení",
+      "MenuPopupColors": "Barvy",
+      "MenuPopupApps": "Aplikace",
+      "MenuPopupToggleDesktop": "Přepnout z/na plochu",
+      "MenuPopupToggleTheme": "Přepnout schéma barev",
+      "MenuPopupExit": "Ukončit aplikaci",
+      "MenuPopupSettingsRefresh": "Obnovit",
+      "MenuPopupSettingsRunOnStartup": "Spustit při startu Windows",
+      "MenuPopupSettingsAutoSize": "Automatická velikost",
+
+      "EdgeLeft": "Vlevo",
+      "EdgeRight": "Vpravo",
+      "EdgeTop": "Nahoře",
+      "EdgeBottom": "Dole",
+
+      "SearchCategoryWindows": "Okna",
+      "SearchCategoryPinnedApps": "Připnuté aplikace",
+      "SearchCategoryInstalledApps": "Aplikace",
+      "SearchCategoryInstalledDocs": "Dokumenty",
+
+      "JumpListMenuCloseWindow": "Zavřít okno",
+      "JumpListMenuCancel": "Zrušit",
+      "JumpListCategoryTasks": "Úlohy",
+      "JumpListCategoryPinned": "Připnuté položky",
+      "JumpListCategoryRecent": "Poslední položky",
+      "JumpListCategoryFrequent": "Časté položky",
+
+      "CustomMostVisited": "Často navštěvované",
+      "CustomRecentlyClosed": "Nedávno zavřené"
+    }
+  }
+}     

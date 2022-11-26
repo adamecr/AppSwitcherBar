@@ -5,13 +5,14 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using net.adamec.ui.AppSwitcherBar.Dto;
+using net.adamec.ui.AppSwitcherBar.ViewModel;
 
-namespace net.adamec.ui.AppSwitcherBar.Wpf
+namespace net.adamec.ui.AppSwitcherBar.WpfExt
 {
     /// <summary>
     /// Customized <see cref="Button"/> used to present the application window or pinned application in the app bar
     /// </summary>
-    internal class AppButton : Button
+    public class AppButton : Wpf.Ui.Controls.Button
     {
         /// <summary>
         /// Flag whether the button supports thumbnails, allowed for window buttons only
@@ -175,6 +176,53 @@ namespace net.adamec.ui.AppSwitcherBar.Wpf
                 ResetThumbnailTimer();
                 thumbnailTimer = value;
             }
+        }
+
+        /// <summary>
+        /// CTOR - allow drop (be a drop target for file)
+        /// </summary>
+        public AppButton() 
+        {
+            AllowDrop = true;
+        }
+
+        /// <summary>
+        /// Invoked when the "object" (file) is dragged into the app button
+        /// Just show the application window to allow to drag and drop file in there
+        /// </summary>
+        /// <param name="e">Event arguments</param>
+        protected override void OnDragEnter(DragEventArgs e)
+        {
+            base.OnDragEnter(e);
+
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                //if it's file, show the application window to allow to drag and drop file in there
+                var bar = WpfTools.FindVisualAncestor<MainWindow>(this);
+                if (bar is { DataContext: MainViewModel main } && DataContext is WndInfo wndInfo)
+                {
+                    main.ToggleApplicationWindow(wndInfo.Hwnd, true);
+                }
+            }
+
+            //we don't want to drop it to app button
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Invoked when the "object" (file) is dragged into the app button
+        /// We don't want to drop it to app button - show the <see cref="DragDropEffects.None"/>
+        /// (it's a visual hint, even if the file is dropped here, nothing happen as the Drop handler is not implemented)
+        /// </summary>
+        /// <param name="e">Event arguments</param>
+        protected override void OnDragOver(DragEventArgs e)
+        {
+            base.OnDragOver(e);
+
+            //we don't want to drop it to app button
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
         }
 
 

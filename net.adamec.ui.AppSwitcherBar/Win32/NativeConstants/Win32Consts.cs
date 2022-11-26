@@ -194,6 +194,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         internal const string CLSID_KnownFolderManager = "4df0c730-df9d-4ae3-9153-aa6b82e9795a";
         internal const string CLSID_ApplicationResolver = "660B90C8-73A9-4B58-8CAE-355B7F55341B";
         internal const string CLSID_AutomaticDestinationList = "f0ae1542-f497-484b-a175-a20db09144ba";
+        internal const string CLSID_Shell = "13709620-C279-11CE-A49E-444553540000";
 
         //interface IDs
         internal const string IID_IPropertyStore = "886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99";
@@ -225,5 +226,6 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         internal const string IID_IObjectCollection = "5632B1A4-E38A-400A-928A-D4CD63230295";
         internal const string IID_IObjectArray = "92CA9DCD-5622-4BBA-A805-5E9F541BD8C9";
         internal const string IID_IAutomaticDestinationList2 = "E9C5EF8D-FD41-4F72-BA87-EB03BAD5817C";
+        internal const string IID_IShellDispatch6 = "286E6F1B-7113-4355-9562-96B7E9D64C54";
     }
 }

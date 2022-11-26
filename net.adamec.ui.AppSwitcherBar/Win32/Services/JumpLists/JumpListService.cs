@@ -19,6 +19,9 @@ using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces.Extensions;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell.Properties;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Mvvm.Contracts;
+
 // ReSharper disable CommentTypo
 // ReSharper disable IdentifierTypo
 
@@ -34,13 +37,13 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <summary>
         /// Logger used
         /// </summary>
-        private readonly ILogger logger;
+        protected readonly ILogger Logger;
         // 1xxx - JumpList Service (19xx Errors/Exceptions)
         // 12xx -   Taskbar pinned apps
         /// <summary>
         /// Log definition options
         /// </summary>
-        private static readonly LogDefineOptions LogOptions = new() { SkipEnabledCheck = true };
+        protected static readonly LogDefineOptions LogOptions = new() { SkipEnabledCheck = true };
 
 
         //----------------------------------------------
@@ -62,11 +65,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// Logs record (Information) when a jump list file processing starts
         /// </summary>
         /// <param name="fileName">Source file of the JumpList item (full path)</param>
-        private void LogJumpListProcessingStart(string fileName)
+        protected void LogJumpListProcessingStart(string fileName)
         {
-            if (logger.IsEnabled(LogLevel.Information))
+            if (Logger.IsEnabled(LogLevel.Information))
             {
-                __LogJumpListProcessingStartDefinition(logger, fileName, null);
+                __LogJumpListProcessingStartDefinition(Logger, fileName, null);
             }
         }
 
@@ -90,11 +93,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         /// <param name="fileName">Source file of the JumpList item (full path)</param>
         /// <param name="itemsCount">Number of items retrieved</param>
-        private void LogJumpListProcessingEnd(string fileName, int itemsCount)
+        protected void LogJumpListProcessingEnd(string fileName, int itemsCount)
         {
-            if (logger.IsEnabled(LogLevel.Information))
+            if (Logger.IsEnabled(LogLevel.Information))
             {
-                __LogJumpListProcessingEndDefinition(logger, fileName, itemsCount, null);
+                __LogJumpListProcessingEndDefinition(Logger, fileName, itemsCount, null);
             }
         }
 
@@ -120,11 +123,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <param name="name">Name of JumpList item (category/title)</param>
         /// <param name="executable">Executable with optional arguments of JumpList item</param>
         /// <param name="hasIcon">Flag whether the JumpList item has an icon</param>
-        private void LogGotJumpListItem(string source, string name, string? executable, bool hasIcon)
+        protected void LogGotJumpListItem(string source, string name, string? executable, bool hasIcon)
         {
-            if (logger.IsEnabled(LogLevel.Debug))
+            if (Logger.IsEnabled(LogLevel.Debug))
             {
-                __LogGotJumpListItemDefinition(logger, source, name, executable, hasIcon, null);
+                __LogGotJumpListItemDefinition(Logger, source, name, executable, hasIcon, null);
             }
         }
 
@@ -147,11 +150,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// Logs record (Debug) when a pinned application information is retrieved
         /// </summary>
         /// <param name="pinnedAppInfo">Information about pinned application</param>
-        private void LogGotPinnedApplication(PinnedAppInfo pinnedAppInfo)
+        protected void LogGotPinnedApplication(PinnedAppInfo pinnedAppInfo)
         {
-            if (logger.IsEnabled(LogLevel.Debug))
+            if (Logger.IsEnabled(LogLevel.Debug))
             {
-                __LogGotPinnedApplicationDefinition(logger, pinnedAppInfo.ToString(), null);
+                __LogGotPinnedApplicationDefinition(Logger, pinnedAppInfo.ToString(), null);
             }
         }
 
@@ -174,11 +177,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         /// <param name="source">Name of the JumpList source file</param>
         /// <param name="ex">Exception thrown</param>
-        private void LogJumpListException(string source, Exception ex)
+        protected void LogJumpListException(string source, Exception ex)
         {
-            if (logger.IsEnabled(LogLevel.Warning))
+            if (Logger.IsEnabled(LogLevel.Warning))
             {
-                __LogJumpListExceptionDefinition(logger, source, ex);
+                __LogJumpListExceptionDefinition(Logger, source, ex);
             }
         }
 
@@ -200,11 +203,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// Logs record (Warning) when there is a problem when reading the JumpList source while
         /// </summary>
         /// <param name="source">Name of the JumpList source file</param>
-        private void LogJumpListSourceParsingError(string source)
+        protected void LogJumpListSourceParsingError(string source)
         {
-            if (logger.IsEnabled(LogLevel.Warning))
+            if (Logger.IsEnabled(LogLevel.Warning))
             {
-                __LogJumpListSourceParsingErrorDefinition(logger, source, null);
+                __LogJumpListSourceParsingErrorDefinition(Logger, source, null);
             }
         }
 
@@ -214,13 +217,23 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <summary>
         /// Application settings
         /// </summary>
-        private readonly IAppSettings settings;
+        protected readonly IAppSettings Settings;
 
         /// <summary>
         /// Dictionary of known AppIds from configuration containing pairs executable-appId (the key is in lower case)
         /// When built from configuration, the record (key) is created for full path from config and another one without a path (file name only) if applicable
         /// </summary>
-        private readonly Dictionary<string, string> knownAppIds;
+        protected readonly Dictionary<string, string> KnownAppIds;
+
+        /// <summary>
+        /// UI theme service
+        /// </summary>
+        protected readonly IThemeService ThemeService;
+
+        /// <summary>
+        /// Language service
+        /// </summary>
+        protected readonly ILanguageService LanguageService;
 
         /// <summary>
         /// Internal CTOR
@@ -229,11 +242,15 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         /// <param name="settings">Application setting</param>
         /// <param name="logger">Logger to be used</param>
-        internal JumpListService(IAppSettings settings, ILogger logger)
+        /// <param name="themeService">Application theme service</param>
+        /// <param name="languageService">Language service</param>
+        internal JumpListService(IAppSettings settings, ILogger logger, IThemeService themeService, ILanguageService languageService)
         {
-            this.logger = logger;
-            this.settings = settings;
-            knownAppIds = settings.GetKnowAppIds();
+            this.Logger = logger;
+            Settings = settings;
+            ThemeService = themeService;
+            LanguageService = languageService;
+            KnownAppIds = settings.GetKnowAppIds();
         }
 
         /// <summary>
@@ -241,8 +258,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         /// <param name="options">Application settings configuration</param>
         /// <param name="logger">Logger used</param>
+        /// <param name="themeService">Application theme service</param>
+        /// <param name="languageService">Language service</param>
         // ReSharper disable once UnusedMember.Global
-        public JumpListService(IOptions<AppSettings> options, ILogger<JumpListService> logger) : this(options.Value, logger)
+        public JumpListService(IOptions<AppSettings> options, ILogger<JumpListService> logger, IThemeService themeService, ILanguageService languageService) 
+            : this(options.Value, logger,themeService,languageService)
         {
             //used from DI - DI populates the parameters and the internal CTOR is called then
         }
@@ -255,7 +275,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <param name="appId">Application ID - either explicit AppId or full path to executable</param>
         /// <param name="installedApplications">Information about installed applications</param>
         /// <returns>Array of JumpList items retrieved for given <paramref name="appId"/></returns>
-        public LinkInfo[] GetJumpListItems(string appId, InstalledApplications installedApplications)
+        public virtual LinkInfo[] GetJumpListItems(string appId, InstalledApplications installedApplications)
         {
             var jumplistItems = new List<LinkInfo>();
             var b = Encoding.Unicode.GetBytes(appId.ToUpper());
@@ -315,7 +335,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 {
                     var clsId = new Guid("00021401-0000-0000-C000-000000000046"); //Shortcut/link
                     var clsBytes = clsId.ToByteArray();
-                    const string category = "Recent";
+                    var category = LanguageService.Translate(TranslationKeys.JumpListCategoryRecent) ?? "Recent";
                     var categoryCounter = 0;
 
                     foreach (var streamInfo in storageRoot.GetStreams())
@@ -334,7 +354,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                         //parse link from stream
                         using var input = new MemoryStream(oleStreamData);
                         var iStream = new NativeStreamWrapper(input);
-                        if (!ParseLink(iStream, source, category, links, installedApplications, categoryCounter >= settings.JumpListCategoryLimit))
+                        if (!ParseLink(iStream, source, category, links, installedApplications, categoryCounter >= Settings.JumpListCategoryLimit))
                         {
                             //something is wrong, doesn't make sense to continue
                             LogJumpListSourceParsingError(source);
@@ -392,13 +412,20 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     {
                         case 0: //custom category type - collection of custom destinations
                             var categoryTitle = ParseCategoryTitle(reader) ?? "Recent";
+                            categoryTitle = categoryTitle switch
+                            {
+                                "Recent" => LanguageService.Translate(TranslationKeys.JumpListCategoryRecent),
+                                "Frequent" => LanguageService.Translate(TranslationKeys.JumpListCategoryFrequent),
+                                _ => LanguageService.TranslateCustom(categoryTitle),
+                            };
+                            categoryTitle ??= "Recent";
                             result = ParseCategoryLinks(reader, iStream, source, categoryTitle, links, installedApplications, true);
                             break;
                         case 1: //known category type - collection of known destinations (recent, frequent)
                             result = ParseKnownCategory(reader);
                             break;
                         case 2: //custom tasks - collection of tasks
-                            result = ParseCategoryLinks(reader, iStream, source, "Tasks", links, installedApplications, false);
+                            result = ParseCategoryLinks(reader, iStream, source, LanguageService.Translate(TranslationKeys.JumpListCategoryTasks) ?? "Tasks", links, installedApplications, false);
                             break;
                     }
 
@@ -425,7 +452,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         /// <param name="reader">Reader used to access the custom destinations file stream</param>
         /// <returns>Category title parsed from custom destinations file</returns>
-        private static string? ParseCategoryTitle(BinaryReader reader)
+        protected static string? ParseCategoryTitle(BinaryReader reader)
         {
             var charCnt = reader.ReadInt16();
             if (charCnt <= 0) return null;
@@ -449,13 +476,13 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <param name="installedApplications">Infomration about installed applications</param>
         /// <param name="applyLimit">Flag whether to apply <see cref="AppSettings.JumpListCategoryLimit"/></param>
         /// <returns>Returns False in case of error, otherwise true</returns>
-        private bool ParseCategoryLinks(BinaryReader reader, IStream iStream, string source, string category, List<LinkInfo> links, InstalledApplications installedApplications, bool applyLimit)
+        protected bool ParseCategoryLinks(BinaryReader reader, IStream iStream, string source, string category, List<LinkInfo> links, InstalledApplications installedApplications, bool applyLimit)
         {
             var categoryCounter = 0;
             var countItems = reader.ReadInt32();
             for (var i = 0; i < Math.Min(countItems, 1000); i++) //have a hard limit big enough not to impact "normal" processing, but prevent long loops in case the format/parsing is not as expected and the count "makes no sense" (is too big)
             {
-                if (!ParseLink(iStream, source, category, links, installedApplications, applyLimit && categoryCounter >= settings.JumpListCategoryLimit))
+                if (!ParseLink(iStream, source, category, links, installedApplications, applyLimit && categoryCounter >= Settings.JumpListCategoryLimit))
                 {
                     //something is wrong, doesn't make sense to continue
                     LogJumpListSourceParsingError(source);
@@ -523,7 +550,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 string? title = null;
                 var isStoreApp = false;
 
-                if (!settings.JumpListUseTempFiles)
+                if (!Settings.JumpListUseTempFiles)
                 {
                     //Try to get the information from shell properties of link
                     //ShellItem is created from link's ID list, so it represents the link target and it's used just to get icon  (if not overriden by the properties within the link)
@@ -537,7 +564,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
 
 
                 // ReSharper disable once SuspiciousTypeConversion.Global
-                if (link is IPersistFile persistFile && settings.JumpListUseTempFiles)
+                if (link is IPersistFile persistFile && Settings.JumpListUseTempFiles)
                 {
                     //Try to get the information from shell properties of link ShellItem
                     //Save .lnk to temp file, retrieve IShellItem2 for the temp file, get the info and delete the temp file.
@@ -574,7 +601,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                         if (string.IsNullOrEmpty(appId))
                         {
                             var targetExecutable = Path.GetFileName(targetPath);
-                            if (!string.IsNullOrEmpty(targetPath) && !string.IsNullOrEmpty(targetExecutable) && knownAppIds.TryGetValue(targetExecutable, out var knownAppId)) appId = knownAppId;
+                            if (!string.IsNullOrEmpty(targetPath) && !string.IsNullOrEmpty(targetExecutable) && KnownAppIds.TryGetValue(targetExecutable, out var knownAppId)) appId = knownAppId;
                         }
 
                         if (!string.IsNullOrEmpty(appId))
@@ -615,7 +642,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                                     var packagePath = Package.GetPackagePath(packageFullName);
                                     if (packagePath != null)
                                     {
-                                        var imgAsset = Package.GetPackageImageAsset(packageFullName, propLogo, 32);
+                                        var imgAsset = Package.GetPackageImageAsset(packageFullName, propLogo, 32, ThemeService.GetTheme()==ThemeType.Dark);
                                         if (imgAsset != null)
                                         {
                                             icon = new BitmapImage(new Uri(imgAsset));
@@ -693,7 +720,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// Just reads and forgets the data to move forward within the stream
         /// </summary>
         /// <param name="reader">Reader used to access the custom destinations file</param>
-        private static void ParseFooter(BinaryReader reader)
+        protected static void ParseFooter(BinaryReader reader)
         {
             reader.ReadUInt32(); //should be AB FB BF BA
         }
@@ -770,7 +797,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <returns>Array of information about the applications pinned to the taskbar</returns>
         public PinnedAppInfo[] GetPinnedApplications(StringGuidPair[] knownFolders)
         {
-            if (!settings.ShowPinnedApps) return Array.Empty<PinnedAppInfo>();
+            if (!Settings.ShowPinnedApps) return Array.Empty<PinnedAppInfo>();
 
             var titlePropertyKey = new PropertyKey("9e5e05ac-1936-4a75-94f7-4704b8b01923", 0);
 
@@ -808,6 +835,12 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     "unknown";
 
                 var appId = shellProperties.ApplicationUserModelId;
+                if (appId == null && Settings.FeatureFlag<bool>(MainViewModel.FF_UseApplicationResolver))
+                {
+                    //Try to get AppUserModelId using the win32 app resolver
+                    appId = WndAndApp.GetWindowApplicationUserModelId(shellItem);
+                }
+
                 var executable = GetExecutableFromLinkProps(shellProperties);
                 if (appId == null && executable != null)
                 {
@@ -815,7 +848,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     appId = Shell.Shell.ReplaceKnownFolderWithGuid(executable);
                 }
 
-                var appInfo = new PinnedAppInfo(title, order, type, shellProperties, appId, executable);
+                var appInfo = new PinnedAppInfo(title, order, type, shellProperties, appId, executable, ThemeService.GetTheme() == ThemeType.Dark);
                 appInfos.Add(appInfo);
                 order++;
                 Marshal.FreeCoTaskMem(pidl);

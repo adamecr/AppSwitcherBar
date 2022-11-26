@@ -10,24 +10,39 @@ I did not use any invasive techniques that replace the Win11 task bar as I use W
 To start `AppSwitcherBar`, just run `AppSwitcherBar.exe`. 
 Main features
  - Top level **application windows** are presented as **buttons within the bar**
- - **Applications pinned to task bar** without any window open are presented as light background buttons with title in italics. **Click** on the button to launch the pinned application.
+ - **Applications pinned to task bar** without any window open are presented as transparent background buttons with title in italics. **Click** on the button to launch the pinned application.
  - The buttons for windows of the same applications are displayed together but there is always a button for each top level window (this is called grouping here)
  - Optionally, it's possible to hide the applications (buttons) having only single window (use `HideSingleWindowApps` setting). When the pinned applications support is on and the application has a pin, it will be not be hiden even having a single window.
  - **Click** on the application window button **to switch to application** or to minimize the window of foreground applicaiton
+ - When a **file is dragged over** the application window button, the application windows is activated, so the file can easily be droppped there
  - **Hover the mouse** over the application window button **to show the live thumbnail** of the window
  - **Drag and drop** (using mouse and left button) the application window buttons **to reorder** them. You can reorder the same application windows ("within group") or the whole applications ("groups")
  - **Right click** on the application window button for the context menu with possibility to **close the window**, **start a new application instance** or **launch** the (recent) **item or task from JumpList**.
- - Click on  the **search** icon and search for the text in window caption and name of pinned or installed application.
+ - Click on the **hamburger** icon to show the menu (the search panel is open by default)
+ 
+ ### Menu ###
+ - Click on the **desktop** icon to toggle the desktop
+ - Click on the **search** icon and search for the text in window caption and name of pinned or installed application.
    - Click on the item in the search result to switch to window or launch the app. 
    - Press `ESC` key to clear the search text. When the search text is empty, it will close the search
    - Press `Enter` key to "execute" the search result shown in bold. `Up`, `Down`, `PgUp`, `PgDn` keys will move the selection
    - Use `w:` prefix to search in windows only and `a:` prefix to search the applications only
- - Toggle the **settings panel** using the **`Gear` icon**.
+ - Click on the **applications** icon to show the list of applications (and documents) available in the Windows Start menu
+   - Click on the item in the list to lauch the application or document
+   - Click on the folder item to expand/collapse the folder
+   - Use the letter key (A-Z) on the keyboard to quickly move within the list if any item starting with such letter exists
+ - Click on the **theme** icon to toggle between light and dark theme
+ - Click on the **gear** icon to show the application settings.
    - **Set the docking edge** (top, bottom, left, right)
    - **Choose the monitor** where to display the `AppSwitcherBar`
    - Enable/disable bar and application window button **auto-size**
    - Enable/disable **starting** the `AppSwitcherBar` **on Windows start**
- - **Close the `AppSwitcherBar`** using the **`X` icon**.
+ - Click on the **power** icon to close the `AppSwitcherBar`.
+ - Use the icon at the top to show/hide the button labels
+ - To **close menu**
+   - Click again on the hamburger icon at the main window or 
+   - Use the icon with arrow down in the menu or
+   - Press `Ecs` key when in search and there is no text to search for (or press `Ecs` twice - first to clear the search text)
 
 
  ## Features ##
@@ -35,14 +50,11 @@ Main features
 
 ![Main AppSwitcherBar window](doc/img/AppSwitcherBar.png)
 
-
 As mentioned above, the idea is not to use any invasive techniques. It's possible to get a good result when combining the `AppSwitcherBar` with auto-hide functionality of standard Windows Taskbar. In such case the `AppSwitcherBar` seems to be "main bar", although it's possible to simply get the Windows Taskbar by moving the mouse "over the outer edge".
-
-![AppSwitcherBar With Hidden Taskbar](doc/img/AutohideTaskbar.png)
 
 `AppSwitcherBar` periodically enumerates the available application windows and presents them as buttons in the bar. The current active (foreground) application window has the highlighted button. The button contains icon (if it can be retrieved) and the window title. The title can be cropped to fit the button size, the full title is available in tool-tip when hovering the mouse over the button.
 
-Click to window button to make it active (foreground). Clicking to the button of the active application window makes such window minimized.
+Click to window button to make it active (foreground). Clicking to the button of the active application window makes such window minimized. When a file is dragged over the application window button, the application windows is also activated, allowing the easy drop of the file to the window.
 
 The windows of the "same" applications don't group into single button (well, that's why I built the app), however the `AppSwitchBar` puts the application windows belonging to the same process together (that's what "grouping" is in context of `AppSwitchBar`).
 
@@ -51,7 +63,7 @@ Hovering over the button pops up the live thumbnail of the application window. A
 ![Application window thumbnail](doc/img/Thumbnail.png)
 
 
-`AppSwitcherBar` shows the also the buttons of the applications pinned to the task bar as light buttons ("pins") when there is no window open for the application. The pin button doesn't have the thumbnail and click to the button launches the application.
+`AppSwitcherBar` shows also the buttons of the applications pinned to the task bar as transparent buttons with italics caption ("pins") when there is no window open for the application. The pin button doesn't have the thumbnail and click to the button launches the application.
 *Note: The functionality uses undocumented Windows interface `IPinnedList3`, so it might not be stable. Use the setting `ShowPinnedApps` to switch it off in case of issues.*
 
 ![Application pin button](doc/img/Pin.png)
@@ -75,19 +87,32 @@ When the `JumpList` feature flag is set (true by default) and the application pr
 
 ![JumpList menu](doc/img/JumpList.png)
 
-Click to the search icon to open the search box. Type the text to search for within the window captions and within the names of pinned and installed applications. The search results are presented as you type. Click on the result item to switch to window or launch the application. The search is case insensitive and it's possible to limit the search to windows only using the `w:` prefix in the search text. Prefix `a:` limits the search to applications only. Use `ESC` key to clean the search text. When the search text is empty, `ESC` will close the search.
+### Menu ###
+Click on the hamburger icon in the main application bar to show the menu popup. The search panel is open by default.
 
-![JumpList menu](doc/img/Search.png)
+![Menu popup](doc/img/Menu.png)
+
+To close the menu, click again on the hamburger icon at the main window or use the `Hide popup` item in the menu or press `Ecs` key when in search and there is no text to search for (or press `Ecs` twice - first to clear the search text). 
+
+Use the icon at the top to show/hide the button labels. The desktop icon toggles the desktop and the theme icon toggles between light and dark theme.Click on the power icon to close the `AppSwitcherBar` application and restore the Windows content area.
+
+#### Search ####
+Click oo the search icon to open the search box. Type the text to search for within the window captions and within the names of pinned and installed applications. The search results are presented as you type. Click on the result item to switch to window or launch the application. The search is case insensitive and it's possible to limit the search to windows only using the `w:` prefix in the search text. Prefix `a:` limits the search to applications only. Use `ESC` key to clean the search text. When the search text is empty, `ESC` will close the menu popup.
+
+![Search panel](doc/img/Search.png)
 
 The first search result is by default selected and marked with bold caption. Press `Enter` to execute the selected (bold) result the same way as the click will do. The selection can be moved `Up` and `Down` using the arrow keys. When using `PgUp` or `PgDn`, the selection will move to the previous/next category.
 
 The search functionality can be disabled using the `AllowSearch` setting. The settings also allow to set the `SearchResultPanelWidth` and number of items per category (`SearchListCategoryLimit`).
 
+#### Application list ####
+Click on the applications icon to show the list of applications and documents available in the Windows Start menu. The items are grouped by the first letter (A-Z) plus `#` representing digits (0-9) and `~` for other characters, the list is sorted alphabetically. Click on the folder item to expand/collapse the folder, click on the item in the list to lauch the application or document. Use the letter key (A-Z) on the keyboard to quickly move within the list if any item starting with such letter exists.
+
+![JumpList menu](doc/img/AppList.png)
 
 
-Use the "X" icon to close the application and restore the content area.
-
-The UI provides a few "on screen" (runtime) settings. Click to gear icon to toggle the settings panel.
+#### Settings ####
+The UI provides a few "on screen" (runtime) settings. Click on gear icon to open the settings panel.
 
 ![Settings panel](doc/img/Settings.png)
 
@@ -150,19 +175,26 @@ Besides the runtime configuration described above, it's possible to adjust the a
     "CheckForAppIdChange": false,
 
     "InvertWhiteIcons": true,
+    "InvertBlackIcons": true,
 
     "JumpListCategoryLimit": 10,
     "JumpListUseTempFiles": false,
 
     "AllowSearch": true,
     "SearchListCategoryLimit": 5,
-    "SearchResultPanelWidth": 400,
+
+    "MenuPopupWidth": 400,
+    "MenuPopupMaxHeight": 600,
+
+    "StartupTheme":"System"
 
     "FeatureFlags": {
       "JumpList": true,
       "RunOnWindowsStartup": true,
       "AnonymizeWindows": true,
-      "UseApplicationResolver": true
+      "UseApplicationResolver": true,
+      "EnableColorsInMenuPopup": false,
+      "KeepMenuPopupOpen": false
     },
 
     "AppIds": {
@@ -207,23 +239,92 @@ Besides the runtime configuration described above, it's possible to adjust the a
 - `RefreshWindowInfosIntervalMs` - The interval in milliseconds for refreshing the collection and status of the application windows 
 - `CheckForIconChange` - Flag whether `AppSwitcherBar` periodically checks windows for an icon change or whether the icon retrieved for the first time is used. Switching it of can give some performance gain, however some applications change their icon during their runtime to signal user some state information.
 - `CheckForAppIdChange` - Flag whether `AppSwitcherBar` periodically checks windows for change of their Application ID that has an impact to grouping the buttons together. It's off by default as the runtime changes of Application ID are quite rare.
-- `InvertWhiteIcons` - `AppSwitcherBar` uses light WPF theme. When the host Windows are set to dark theme, some icons provided by applications are in shadows of white (different opacity to be exact) that might be hard to see on the light background. When this option is on, `AppSwitcherBar` tries to identify "all white" icons and invert the to black for better visual experience.
+- `InvertWhiteIcons` - When `AppSwitcherBar` uses light WPF and the host Windows are set to dark theme, some icons provided by applications are in shadows of white (different opacity to be exact) that might be hard to see on the light background. When this option is on, `AppSwitcherBar` tries to identify "all white" icons and invert the to black for better visual experience.
+- `InvertBlackIcons` - Similar like `InvertWhiteIcons`, but applicable for black icons when using the dark scheme.
 - `JumpListCategoryLimit` - The maximum number of items in individual JumpList categories except `Tasks`.
 - `JumpListUseTempFiles` - Flag whether to extract the links (.lnk) from JumpLists to temporary files and read properties from them. Otherwise the in-memory processing is used.
 - `AllowSearch` - Flag whether to allow the search functionality.
 - `SearchListCategoryLimit` - Maximum number of items in single category when presenting the search results
-- `SearchResultPanelWidth` - Width of the panel presenting the search results
+- `MenuPopupWidth` - Width of the menu popup
+- `MenuPopupMaxHeight` - Maximal height of the menu popup
+- `StartupTheme` - `System`, `Light` or `Dark` theme to be used on application start.
 - `FeatureFlags` - Section used to configure (and allow/block) the experimental features or work in progress.
   - `JumpList` - Enable/Disable JumpList functionality.
   - `JumpListSvcVersion` - `JumpListService` version selector. `JumpListService2` (`"JumpListSvcVersion":2`) is used by default. Use `"JumpListSvcVersion":1` to switch to legacy `JumpListService`.
   - `RunOnWindowsStartup` - Enable/Disable functionality manipulating the Windows startup link for `AppSwitcherBar`. Use `AllowRunOnWindowsStartup` setting to hide the configuration option, use the feature flag to use the dummy implementation. This is probably gonna be used during the development only
   - `AnonymizeWindows` - Enable/Disable anonymization of window captions in buttons. This used when making the app screen shots 
   - `UseApplicationResolver` - Enable/Disable using the undocumented win32 api to get the AppId
+  - `EnableColorsInMenuPopup` - Enable/Disable the menu popup panel showing the theme colors 
+  - `KeepMenuPopupOpen` - When set, the menu popup is kept open even when another application is active 
 - `AppIds` - AppIds or Application IDs are used for grouping the buttons together, but they are also used to identify the application within the system and use the information from list of installed applications to get some additional data (for example application icon) or to decide how to launch the application (desktop and Store applications are launched different way). Unfortunately, there is no simple and straight way how to obtain the AppId, so some "try and see" logic is used. For some cases it's just easier to define the AppIds for particular application directly in the configuration. `Explorer` should always be there as defined above.
 
-*Note: The application uses the standard [.NET Configuration system](https://docs.microsoft.com/en-us/dotnet/core/extensions/configuration), so it's also possible to set the configuration values using the command line parameters or environment values*
+The application uses the standard [.NET Configuration system](https://docs.microsoft.com/en-us/dotnet/core/extensions/configuration), so it's also possible to set the configuration values using the command line parameters or environment values. For example the theme configuration from `appsettings.json` can be overriden using the command line parameter `AppSettings:StartupTheme=Light`. There are two exceptions:
+ - To set the language from command line, don't use the prefix. The parameter should be for example `Language=cs"
+ - The user settings persisted in `appsettings.user.json` (see info above) takes the priority even over the command line parameters
 
 *Note: The application uses the standard [.NET Logging API](https://docs.microsoft.com/en-us/dotnet/core/extensions/logging) that can be configured in the settings file as well. The default logging providers are used (Console, Debug, EventSource,EventLog)* 
+
+## Themes and Localization ##
+[WPF UI](https://github.com/lepoco/wpfui) is used for modern look and feel. It brings an ability to switch between `Light` and `Dark` themes. The startup theme is managed by setting `StartupTheme` and it can be `System`, `Light` or `Dark`. When `System` is set (default), the theme is set to `Light` or `Dark` based on the current system theme. An user can toggle between `Light` and `Dark` theme using the button in the popup menu.
+
+The UI can be translated into different languages by configuration. When the application is starting, it pre-loads the settings from `appsettings.json` command line (use `Language=code` without prefix!)`. If no setting is provided, the default system culture is used(`CultureInfo.CurrentCulture.Name`).
+
+The language code value syntax can be:
+ - two-letter language code. For example `en` or `cs`
+ - combination of a two-letter language code and a two-letter country or region code. For example `en-US` or `en-GB`
+ - extended even more with subtags split by hyphen (`-`)
+
+The application will try to load the translations from `language.{code}.json`. When the code is multi part, it will try to load from "all parts" from less to more specific. For example for `en-US`, it will try   `language.en.json` and `language.en-us.json`. Language file provides the translations (values) for known keys. The language file can contain only some translations - these are the overrides of default (english) of less specific language file.
+
+The language file has following structure:
+
+```json
+{
+  "Language": {
+    "Translations": {
+      "MenuPopupHidePopup": "Hide popup",
+      "MenuPopupSearch": "Search",
+      "MenuPopupSettings": "Settings",
+      "MenuPopupColors": "Colors",
+      "MenuPopupApps": "Applications",
+      "MenuPopupToggleDesktop": "Toggle desktop",
+      "MenuPopupToggleTheme": "Toggle theme",
+      "MenuPopupExit": "Exit app",
+      "MenuPopupSettingsRefresh": "Refresh",
+      "MenuPopupSettingsRunOnStartup": "Run on Win start",
+      "MenuPopupSettingsAutoSize": "Auto size",
+
+      "EdgeLeft": "Left",
+      "EdgeRight": "Right",
+      "EdgeTop": "Top",
+      "EdgeBottom": "Bottom",
+
+      "SearchCategoryWindows": "Windows",
+      "SearchCategoryPinnedApps": "Pinned applications",
+      "SearchCategoryInstalledApps": "Applications",
+      "SearchCategoryInstalledDocs": "Documents",
+
+      "JumpListMenuCloseWindow": "Close window",
+      "JumpListMenuCancel": "Cancel",
+      "JumpListCategoryTasks": "Tasks",
+      "JumpListCategoryPinned": "Pinned",
+      "JumpListCategoryRecent": "Recent",
+      "JumpListCategoryFrequent": "Frequent",
+
+      "CustomMostVisited": "Most visited",
+      "CustomRecentlyClosed": "Recently closeed"
+    }
+  }
+} 
+```
+
+- `MenuPopup` keys are labels of buttons in menu popup (left bar) and the settings panel
+- `Edge` keys are for edge names
+- `SearchCategory` keys are for the names for categories in search results
+- `JumplListMenu` keys are labels for close window and close jumplist commands
+- `JumplListCategory` keys are for the names of known (standard) categories in jumplists
+- `Custom` keys are used for custom JumpList category names that can be provided by individual applications. To translate these, create custom keys named `Custom` followed by name of the category as provided by application without spaces. The matching is case insensitive. For example `CustomMostVisited` can be used to translate the category `Most visited`.
+
 
 ## Behind the Scenes ##
 This chapter provides some additional information about the implementation details, that might be useful for the developers.
@@ -375,9 +476,12 @@ do
 As mentioned above, the interface is not public and documented (and it's versioned as well), so it can change with some Windows update. Use the setting `ShowPinnedApps` to switch the functionality off in case of issues.
 
 ## Additional (future) Feature Ideas ##
+  - Optional clock panel on the main application bar. Popup with info about time in other time zones defined in settings - in progress for v2.1
+  - Optional audio controls panel on the main application bar allowing to toggle mute and change volume for speakers and/or mic - in progress for v2.1
+  - JumpLists for items in the application list
+  - Windows Start menu pinned applications and groups panel in menu - so far didn't find a way, how to get the items neither for Windows 10 nor for Windows 11
   - Optional auto hide functionality of appbar
-  - Support for localization
-  - Support for system light and dark schemes
+
 
 ## Credits & Sources Used ##
  - [Taskbar Extensions documentation](https://docs.microsoft.com/en-us/windows/win32/shell/taskbar-extensions)
@@ -388,5 +492,6 @@ As mentioned above, the interface is not public and documented (and it's version
    - [James Forshaw's OleViewDotNet](https://github.com/tyranid/oleviewdotnet)
    - [Geoff Chappell's Win API analysis](https://www.geoffchappell.com/index.htm)
  - Windows API Code Pack 1.1 is long time depreciated but still a good source of "how to". The original code is not available anymore, but a "mirror" can be found for example [here](https://github.com/aybe/Windows-API-Code-Pack-1.1) 
- - [MahApps.Metro IconPacks](https://github.com/MahApps/MahApps.Metro.IconPacks) are good source of icons for WPF applications
+ - [MahApps.Metro IconPacks](https://github.com/MahApps/MahApps.Metro.IconPacks) are good source of icons for WPF applications (was used in version 1 of the `AppSwitcherBar`)
+ - [WPF UI](https://github.com/lepoco/wpfui) is used since version 2 of `AppSwitcherBar` for modern look and feel as well for suport of themes
  - WPF implementation of AppBar is based on work of [Mitch Gaffigan](https://github.com/mgaffigan/WpfAppBar)

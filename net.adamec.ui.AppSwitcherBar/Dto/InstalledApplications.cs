@@ -7,7 +7,8 @@ using System.Linq;
 namespace net.adamec.ui.AppSwitcherBar.Dto;
 
 /// <summary>
-/// Container with information of installed applications
+/// Container with information of installed applications ("apps")
+/// and other items registered in Windows AppsFolder/Start menu ("documents")
 /// </summary>
 public class InstalledApplications
 {
@@ -31,15 +32,28 @@ public class InstalledApplications
     private readonly List<InstalledApplication> allApps = new();
 
     /// <summary>
+    /// All items that are not applications ("documents")
+    /// </summary>
+    private readonly List<InstalledApplication> allDocuments = new();
+
+    /// <summary>
     /// Add <paramref name="app"/> into the container
     /// </summary>
     /// <param name="app">Information about installed application</param>
     public void Add(InstalledApplication app)
     {
-        allApps.Add(app);
-        if (!string.IsNullOrEmpty(app.AppUserModelId)) appsByAppId[app.AppUserModelId.ToLowerInvariant()] = app;
-        if (!string.IsNullOrEmpty(app.Executable)) appsByAppLink[app.Executable.ToLowerInvariant()] = app;
-        if (!string.IsNullOrEmpty(app.ShellProperties.ApplicationUserModelId)) appsByPackageAppId[app.ShellProperties.ApplicationUserModelId] = app;
+        if (app.IsApplication)
+        {
+            allApps.Add(app);
+            if (!string.IsNullOrEmpty(app.AppUserModelId)) appsByAppId[app.AppUserModelId.ToLowerInvariant()] = app;
+            if (!string.IsNullOrEmpty(app.Executable)) appsByAppLink[app.Executable.ToLowerInvariant()] = app;
+            if (!string.IsNullOrEmpty(app.ShellProperties.ApplicationUserModelId))
+                appsByPackageAppId[app.ShellProperties.ApplicationUserModelId] = app;
+        }
+        else
+        {
+            allDocuments.Add(app);
+        }
     }
 
     /// <summary>
@@ -51,6 +65,7 @@ public class InstalledApplications
         appsByAppId.Clear();
         appsByAppLink.Clear();
         appsByPackageAppId.Clear();
+        allDocuments.Clear();
     }
 
 
@@ -107,7 +122,7 @@ public class InstalledApplications
     /// Returns installed applications where <see cref="InstalledApplication.Name"/> contains <see cref="text"/>
     /// </summary>
     /// <param name="text">Text to search for</param>
-    /// <returns>Installed applications where <see cref="InstalledApplication.Name"/> contains <see cref="text"/></returns> or empty array
+    /// <returns>Installed applications where <see cref="InstalledApplication.Name"/> contains <see cref="text"/> or empty array</returns>
     public InstalledApplication[] SearchByName(string? text)
     {
         return string.IsNullOrEmpty(text) ?
@@ -115,7 +130,32 @@ public class InstalledApplications
             allApps
                 .Where(a =>
                     a.Name.Contains(text, StringComparison.InvariantCultureIgnoreCase) &&
-                    a.ShellProperties.IsApplication)
+                    a.IsApplication)
                 .ToArray();
+    }
+
+    /// <summary>
+    /// Returns non-applications ("documents") where <see cref="InstalledApplication.Name"/> contains <see cref="text"/>
+    /// </summary>
+    /// <param name="text">Text to search for</param>
+    /// <returns>Installed non-applications ("documents") where <see cref="InstalledApplication.Name"/> contains <see cref="text"/> or empty array</returns>
+    public InstalledApplication[] SearchDocumentsByName(string? text)
+    {
+        return string.IsNullOrEmpty(text) ?
+            Array.Empty<InstalledApplication>() :
+            allDocuments
+                .Where(a =>
+                    a.Name.Contains(text, StringComparison.InvariantCultureIgnoreCase) &&
+                    ! a.IsApplication)
+                .ToArray();
+    }
+
+    /// <summary>
+    /// Returns all items in Windows AppFolder - both all applications and non-applications ("documents")
+    /// </summary>
+    /// <returns>All items in Windows AppFolder</returns>
+    public InstalledApplication[] GetAllItems()
+    {
+        return allApps.Union(allDocuments).ToArray();
     }
 }

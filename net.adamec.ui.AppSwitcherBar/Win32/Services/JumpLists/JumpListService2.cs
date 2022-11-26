@@ -18,6 +18,8 @@ using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces.Extensions;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell.Properties;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Mvvm.Contracts;
 
 // ReSharper disable CommentTypo
 // ReSharper disable IdentifierTypo
@@ -31,201 +33,9 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
     ///  - "merging" of the automatic and custom destinations (categories and items) updated to mirror Windows behavior
     ///  - inspired by https://github.com/Open-Shell/Open-Shell-Menu
     /// </summary>
-    public class JumpListService2 : IJumpListService
+    public class JumpListService2 : JumpListService
     {
-        #region Logging
-        // ReSharper disable InconsistentNaming
-        /// <summary>
-        /// Logger used
-        /// </summary>
-        private readonly ILogger logger;
-        // 1xxx - JumpList Service (19xx Errors/Exceptions)
-        // 12xx -   Taskbar pinned apps
-        /// <summary>
-        /// Log definition options
-        /// </summary>
-        private static readonly LogDefineOptions LogOptions = new() { SkipEnabledCheck = true };
-
-
-        //----------------------------------------------
-        // 1001 Processing JumpList file start
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogJumpListProcessingStart
-        /// </summary>
-        private static readonly Action<ILogger, string, Exception?> __LogJumpListProcessingStartDefinition =
-
-            LoggerMessage.Define<string>(
-                LogLevel.Information,
-                new EventId(1002, nameof(LogJumpListProcessingStart)),
-                "JumpList processing starts: {fileName}",
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Information) when a jump list file processing starts
-        /// </summary>
-        /// <param name="fileName">Source file of the JumpList item (full path)</param>
-        private void LogJumpListProcessingStart(string fileName)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                __LogJumpListProcessingStartDefinition(logger, fileName, null);
-            }
-        }
-
-        //----------------------------------------------
-        // 1002 Processing JumpList file end
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogJumpListProcessingEnd
-        /// </summary>
-        private static readonly Action<ILogger, string, int, Exception?> __LogJumpListProcessingEndDefinition =
-
-            LoggerMessage.Define<string, int>(
-                LogLevel.Information,
-                new EventId(1002, nameof(LogJumpListProcessingEnd)),
-                "JumpList processing ends: {fileName}, {itemsCount} retrieved",
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Information) when a jump list file processing ends
-        /// </summary>
-        /// <param name="fileName">Source file of the JumpList item (full path)</param>
-        /// <param name="itemsCount">Number of items retrieved</param>
-        private void LogJumpListProcessingEnd(string fileName, int itemsCount)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                __LogJumpListProcessingEndDefinition(logger, fileName, itemsCount, null);
-            }
-        }
-
-        //----------------------------------------------
-        // 1003 Got JumpList item
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogGotJumpListItem
-        /// </summary>
-        private static readonly Action<ILogger, string, string, string?, bool, Exception?> __LogGotJumpListItemDefinition =
-
-            LoggerMessage.Define<string, string, string?, bool>(
-                LogLevel.Debug,
-                new EventId(1003, nameof(LogGotJumpListItem)),
-                "Retrieved JumpList item from {source}: {name}: {executable}; has icon: {hasIcon}",
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Debug) when a jump list item is retrieved
-        /// </summary>
-        /// <param name="source">Source file of the JumpList item</param>
-        /// <param name="name">Name of JumpList item (category/title)</param>
-        /// <param name="executable">Executable with optional arguments of JumpList item</param>
-        /// <param name="hasIcon">Flag whether the JumpList item has an icon</param>
-        private void LogGotJumpListItem(string source, string name, string? executable, bool hasIcon)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                __LogGotJumpListItemDefinition(logger, source, name, executable, hasIcon, null);
-            }
-        }
-
-        //----------------------------------------------
-        // 1201 Got Pinned application
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogGotPinnedApplication
-        /// </summary>
-        private static readonly Action<ILogger, string, Exception?> __LogGotPinnedApplicationDefinition =
-
-            LoggerMessage.Define<string>(
-                LogLevel.Debug,
-                new EventId(1201, nameof(LogGotPinnedApplication)),
-                "Retrieved pinned application info: {pinnedAppInfo}",
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Debug) when a pinned application information is retrieved
-        /// </summary>
-        /// <param name="pinnedAppInfo">Information about pinned application</param>
-        private void LogGotPinnedApplication(PinnedAppInfo pinnedAppInfo)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                __LogGotPinnedApplicationDefinition(logger, pinnedAppInfo.ToString(), null);
-            }
-        }
-
-        //----------------------------------------------
-        // 1901 JumpList Exception
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogJumpListException
-        /// </summary>
-        private static readonly Action<ILogger, string, Exception?> __LogJumpListExceptionDefinition =
-            LoggerMessage.Define<string>(
-                LogLevel.Warning,
-                new EventId(1901, nameof(LogJumpListException)),
-                "Exception while processing the JumpList {source}",
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Warning) of exception thrown when processing the JumpList
-        /// </summary>
-        /// <param name="source">Name of the JumpList source file</param>
-        /// <param name="ex">Exception thrown</param>
-        private void LogJumpListException(string source, Exception ex)
-        {
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                __LogJumpListExceptionDefinition(logger, source, ex);
-            }
-        }
-
-        //----------------------------------------------
-        // 1902 JumpList source parsing error
-        //----------------------------------------------
-
-        /// <summary>
-        /// Logger message definition for LogJumpListSourceParsingError
-        /// </summary>
-        private static readonly Action<ILogger, string, Exception?> __LogJumpListSourceParsingErrorDefinition =
-            LoggerMessage.Define<string>(
-                LogLevel.Warning,
-                new EventId(1902, nameof(LogJumpListSourceParsingError)),
-                "Error while parsing the JumpList source - {source}",
-                LogOptions);
-
-        /// <summary>
-        /// Logs record (Warning) when there is a problem when reading the JumpList source while
-        /// </summary>
-        /// <param name="source">Name of the JumpList source file</param>
-        private void LogJumpListSourceParsingError(string source)
-        {
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                __LogJumpListSourceParsingErrorDefinition(logger, source, null);
-            }
-        }
-
-        // ReSharper restore InconsistentNaming
-        #endregion
-
-        /// <summary>
-        /// Application settings
-        /// </summary>
-        private readonly IAppSettings settings;
-
-        /// <summary>
-        /// Dictionary of known AppIds from configuration containing pairs executable-appId (the key is in lower case)
-        /// When built from configuration, the record (key) is created for full path from config and another one without a path (file name only) if applicable
-        /// </summary>
-        private readonly Dictionary<string, string> knownAppIds;
-
+       
         /// <summary>
         /// Internal CTOR
         /// Directly used by <see cref="ViewModelLocator"/> when creating a design time instance.
@@ -233,11 +43,12 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         /// <param name="settings">Application setting</param>
         /// <param name="logger">Logger to be used</param>
-        internal JumpListService2(IAppSettings settings, ILogger logger)
+        /// <param name="themeService">UI theme service</param>
+        /// <param name="languageService">Language service</param>
+        internal JumpListService2(IAppSettings settings, ILogger logger, IThemeService themeService, ILanguageService languageService)
+        :base(settings,logger, themeService, languageService)
         {
-            this.logger = logger;
-            this.settings = settings;
-            knownAppIds = settings.GetKnowAppIds();
+            
         }
 
         /// <summary>
@@ -245,12 +56,14 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// </summary>
         /// <param name="options">Application settings configuration</param>
         /// <param name="logger">Logger used</param>
+        /// <param name="themeService">UI theme service</param>
+        /// <param name="languageService">Language service</param>
         // ReSharper disable once UnusedMember.Global
-        public JumpListService2(IOptions<AppSettings> options, ILogger<JumpListService> logger) : this(options.Value, logger)
+        public JumpListService2(IOptions<AppSettings> options, ILogger<JumpListService2> logger, IThemeService themeService, ILanguageService languageService)
+            : this(options.Value, logger, themeService, languageService)
         {
             //used from DI - DI populates the parameters and the internal CTOR is called then
         }
-
 
         /// <summary>
         /// Checks whether there is automatic and/or custom destinations file for given <paramref name="appId"/> and
@@ -259,7 +72,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         /// <param name="appId">Application ID - either explicit AppId or full path to executable</param>
         /// <param name="installedApplications">Information about installed applications</param>
         /// <returns>Array of JumpList items retrieved for given <paramref name="appId"/></returns>
-        public LinkInfo[] GetJumpListItems(string appId, InstalledApplications installedApplications)
+        public override LinkInfo[] GetJumpListItems(string appId, InstalledApplications installedApplications)
         {
             var jumplistItems = new List<LinkInfo>();
             var b = Encoding.Unicode.GetBytes(appId.ToUpper());
@@ -359,13 +172,25 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     hr = automaticDestinationList.HasList(out var hasList);
                     if (hr.IsSuccess && hasList)
                     {
-                        ProcessCategory(KnownJumpListCategory.Pinned, "Pinned", settings.JumpListCategoryLimit, out var pinnedLinks);
+                        ProcessCategory(
+                            KnownJumpListCategory.Pinned,
+                            LanguageService.Translate(TranslationKeys.JumpListCategoryPinned) ?? "Pinned",
+                            Settings.JumpListCategoryLimit,
+                            out var pinnedLinks);
                         if (pinnedLinks != null) categories.Add(pinnedLinks);
 
-                        ProcessCategory(KnownJumpListCategory.Recent, "Recent", settings.JumpListCategoryLimit, out var recentLinks);
+                        ProcessCategory(
+                            KnownJumpListCategory.Recent,
+                            LanguageService.Translate(TranslationKeys.JumpListCategoryRecent) ?? "Recent",
+                            Settings.JumpListCategoryLimit,
+                            out var recentLinks);
                         if (recentLinks != null) categories.Add(recentLinks);
 
-                        ProcessCategory(KnownJumpListCategory.Frequent, "Frequent", settings.JumpListCategoryLimit, out var frequentLinks);
+                        ProcessCategory(
+                            KnownJumpListCategory.Frequent,
+                            LanguageService.Translate(TranslationKeys.JumpListCategoryFrequent) ?? "Frequent",
+                            Settings.JumpListCategoryLimit,
+                            out var frequentLinks);
                         if (frequentLinks != null) categories.Add(frequentLinks);
                     }
                 }
@@ -466,6 +291,14 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     {
                         case 0: //custom category type - collection of custom destinations
                             var categoryTitle = ParseCategoryTitle(reader) ?? "Recent";
+                            categoryTitle = categoryTitle switch
+                            {
+                                "Recent" => LanguageService.Translate(TranslationKeys.JumpListCategoryRecent),
+                                "Frequent" => LanguageService.Translate(TranslationKeys.JumpListCategoryFrequent),
+                                _ => LanguageService.TranslateCustom(categoryTitle),
+                            };
+                            categoryTitle ??= "Recent";
+
                             result = ParseCategoryLinks(reader, iStream, source, categoryTitle, out var categoryLinks, installedApplications, true);
                             if (result)
                             {
@@ -478,7 +311,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                             result = ParseKnownCategory(reader, out var knownCategory);
                             if (result)
                             {
-                                var category = new JumpListCategory(knownCategory == KnownJumpListCategory.Frequent ? "Frequent" : "Recent", knownCategory);
+                                var category = new JumpListCategory(
+                                    knownCategory == KnownJumpListCategory.Frequent ?
+                                        LanguageService.Translate(TranslationKeys.JumpListCategoryFrequent) ?? "Frequent" :
+                                        LanguageService.Translate(TranslationKeys.JumpListCategoryRecent) ?? "Recent",
+                                    knownCategory);
                                 categories.Add(category);
                             }
                             else
@@ -487,10 +324,13 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                             }
                             break;
                         case 2: //custom tasks - collection of tasks
-                            result = ParseCategoryLinks(reader, iStream, source, "Tasks", out var taskLinks, installedApplications, false);
+                            result = ParseCategoryLinks(
+                                reader, iStream, source,
+                                LanguageService.Translate(TranslationKeys.JumpListCategoryTasks) ?? "Tasks",
+                                out var taskLinks, installedApplications, false);
                             if (result)
                             {
-                                var category = new JumpListCategory("Tasks", KnownJumpListCategory.Tasks);
+                                var category = new JumpListCategory(LanguageService.Translate(TranslationKeys.JumpListCategoryTasks) ?? "Tasks", KnownJumpListCategory.Tasks);
                                 category.Items.AddRange(taskLinks);
                                 categories.Add(category);
                             }
@@ -515,25 +355,6 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
         }
 
         /// <summary>
-        /// Parses the category title from custom destinations file.
-        /// It's number of characters + unicode chars
-        /// </summary>
-        /// <param name="reader">Reader used to access the custom destinations file stream</param>
-        /// <returns>Category title parsed from custom destinations file</returns>
-        private static string? ParseCategoryTitle(BinaryReader reader)
-        {
-            var charCnt = reader.ReadInt16();
-            if (charCnt <= 0) return null;
-
-            var charBuff = new byte[charCnt * 2];
-            var l = reader.Read(charBuff, 0, charCnt * 2);
-
-            var str = Encoding.Unicode.GetString(charBuff, 0, l);
-            return str;
-
-        }
-
-        /// <summary>
         /// Parsers the JumpList items (<paramref name="links"/>) for a single <paramref name="category"/> from custom destinations file
         /// </summary>
         /// <param name="reader">Reader used to access the custom destinations file</param>
@@ -551,7 +372,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
             links = new List<LinkInfo>();
             for (var i = 0; i < Math.Min(countItems, 1000); i++) //have a hard limit big enough not to impact "normal" processing, but prevent long loops in case the format/parsing is not as expected and the count "makes no sense" (is too big)
             {
-                if (!ParseLink(iStream, source, category, links, installedApplications, applyLimit && categoryCounter >= settings.JumpListCategoryLimit))
+                if (!ParseLink(iStream, source, category, links, installedApplications, applyLimit && categoryCounter >= Settings.JumpListCategoryLimit))
                 {
                     //something is wrong, doesn't make sense to continue
                     LogJumpListSourceParsingError(source);
@@ -600,7 +421,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 }
             }
         }
-        
+
         /// <summary>
         /// Parses single link (JumpList item) from automatic or custom destinations file
         /// </summary>
@@ -649,7 +470,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                 string? title = null;
                 var isStoreApp = false;
 
-                if (!settings.JumpListUseTempFiles)
+                if (!Settings.JumpListUseTempFiles)
                 {
                     //Try to get the information from shell properties of link
                     //ShellItem is created from link's ID list, so it represents the link target and it's used just to get icon  (if not overriden by the properties within the link)
@@ -663,7 +484,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
 
 
                 // ReSharper disable once SuspiciousTypeConversion.Global
-                if (link is IPersistFile persistFile && settings.JumpListUseTempFiles)
+                if (link is IPersistFile persistFile && Settings.JumpListUseTempFiles)
                 {
                     //Try to get the information from shell properties of link ShellItem
                     //Save .lnk to temp file, retrieve IShellItem2 for the temp file, get the info and delete the temp file.
@@ -687,7 +508,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     }
 
                     if (propertyStore == null) return;
-                    
+
                     var propTitle = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Title);
                     if (!string.IsNullOrEmpty(propTitle))
                     {
@@ -700,7 +521,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     if (string.IsNullOrEmpty(appId))
                     {
                         var targetExecutable = Path.GetFileName(targetPath);
-                        if (!string.IsNullOrEmpty(targetPath) && !string.IsNullOrEmpty(targetExecutable) && knownAppIds.TryGetValue(targetExecutable, out var knownAppId)) appId = knownAppId;
+                        if (!string.IsNullOrEmpty(targetPath) && !string.IsNullOrEmpty(targetExecutable) && KnownAppIds.TryGetValue(targetExecutable, out var knownAppId)) appId = knownAppId;
                     }
 
                     if (string.IsNullOrEmpty(appId)) return;
@@ -741,7 +562,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                             var packagePath = Package.GetPackagePath(packageFullName);
                             if (packagePath != null)
                             {
-                                var imgAsset = Package.GetPackageImageAsset(packageFullName, propLogo, 32);
+                                var imgAsset = Package.GetPackageImageAsset(packageFullName, propLogo, 32, ThemeService.GetTheme() == ThemeType.Dark);
                                 if (imgAsset != null)
                                 {
                                     icon = new BitmapImage(new Uri(imgAsset));
@@ -818,16 +639,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
                     return false;
             }
         }
-
-        /// <summary>
-        /// Parses the category footer from customs destinations file
-        /// Just reads and forgets the data to move forward within the stream
-        /// </summary>
-        /// <param name="reader">Reader used to access the custom destinations file</param>
-        private static void ParseFooter(BinaryReader reader)
-        {
-            reader.ReadUInt32(); //should be AB FB BF BA
-        }
+        
 
         /// <summary>
         /// Known JumpList Category 
@@ -931,100 +743,5 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists
             }
         }
 
-        /// <summary>
-        /// Gets the information about the applications pinned to the taskbar
-        /// </summary>
-        /// <param name="knownFolders">Information about the known folder paths and GUIDs</param>
-        /// <returns>Array of information about the applications pinned to the taskbar</returns>
-        public PinnedAppInfo[] GetPinnedApplications(StringGuidPair[] knownFolders)
-        {
-            if (!settings.ShowPinnedApps) return Array.Empty<PinnedAppInfo>();
-
-            var titlePropertyKey = new PropertyKey("9e5e05ac-1936-4a75-94f7-4704b8b01923", 0);
-
-            var appInfos = new List<PinnedAppInfo>();
-            var objType = Type.GetTypeFromCLSID(new Guid(Win32Consts.CLSID_TaskbanPin), false);
-            if (objType == null) return Array.Empty<PinnedAppInfo>();
-
-            var obj = Activator.CreateInstance(objType);
-            if (obj is not IPinnedList3 pinnedList) return Array.Empty<PinnedAppInfo>();
-
-            var hrs = pinnedList.EnumObjects(out var iel);
-            if (!hrs.IsSuccess) return Array.Empty<PinnedAppInfo>();
-
-            hrs = iel.Reset();
-            if (!hrs.IsSuccess) return Array.Empty<PinnedAppInfo>();
-
-            var order = 0;
-            var iShellItem2Guid = new Guid(Win32Consts.IID_IShellItem2);
-            do
-            {
-                hrs = iel.Next(1, out var pidl, out _);
-                if (!hrs.IsS_OK) break; //S_FALSE is returned for end of enum, but it's also "success code", so explicit check needed here
-
-                hrs = Shell32.SHCreateItemFromIDList(pidl, iShellItem2Guid, out var shellItem);
-                if (!hrs.IsS_OK || shellItem == null) break;
-
-                var shellProperties = shellItem.GetProperties();
-                var type = shellProperties.IsStoreApp
-                    ? PinnedAppInfo.PinnedAppTypeEnum.Package
-                    : PinnedAppInfo.PinnedAppTypeEnum.Link;
-
-                var title =
-                    shellItem.GetPropertyValue<string>(titlePropertyKey) ??
-                    shellItem.GetPropertyValue<string>(PropertyKey.PKEY_ItemNameDisplay) ??
-                    "unknown";
-
-                var appId = shellProperties.ApplicationUserModelId;
-                var executable = GetExecutableFromLinkProps(shellProperties);
-                if (appId == null && executable != null)
-                {
-                    //appId can be an executable full path, ensure that known folders are transformed to their GUIDs
-                    appId = Shell.Shell.ReplaceKnownFolderWithGuid(executable);
-                }
-
-                var appInfo = new PinnedAppInfo(title, order, type, shellProperties, appId, executable);
-                appInfos.Add(appInfo);
-                order++;
-                Marshal.FreeCoTaskMem(pidl);
-                LogGotPinnedApplication(appInfo);
-            } while (hrs.IsS_OK);
-
-            return appInfos.ToArray();
-        }
-
-        /// <summary>
-        /// Returns the executable path from link properties
-        /// </summary>
-        /// <param name="shellProperties">Link properties to check</param>
-        /// <returns>Executable path if extracted from link properties</returns>
-        private static string? GetExecutableFromLinkProps(ShellPropertiesSubset shellProperties)
-        {
-            if (shellProperties.IsStoreApp) return shellProperties.ParsingPath;
-
-            var executable = shellProperties.LinkTargetParsingPath;
-            if (executable != null)
-            {
-                if (File.Exists(executable) && Path.GetExtension(executable).ToLowerInvariant() == ".exe") return executable;
-
-                //sometimes the LinkTargetParsingPath doesn't contain executable. Probably some issue with app or task bar. Try to get executable from link then
-
-                // ReSharper disable SuspiciousTypeConversion.Global
-                if (shellProperties.ParsingPath != null && File.Exists(shellProperties.ParsingPath) &&
-                    new CShellLink() is (IShellLinkW link and IPersistFile linkPersistFile))
-                // ReSharper restore SuspiciousTypeConversion.Global
-                {
-                    linkPersistFile.Load(shellProperties.ParsingPath, 0);
-
-                    //get basic link information
-                    var sb = new StringBuilder(260);
-                    var data = new WIN32_FIND_DATAW();
-                    var ret = link.GetPath(sb, sb.Capacity, data, 0);
-                    executable = ret.IsSuccess && sb.Length > 0 ? sb.ToString() : null;
-                }
-            }
-
-            return executable ?? shellProperties.ParsingPath;
-        }
     }
 }

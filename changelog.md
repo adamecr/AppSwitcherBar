@@ -3,7 +3,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased ##
+## [2.0.0] - 2022-11-26 ##
+### Added ###
+- **Support for Dark and Light UI theme.** 
+- **Support for UI translation for other languages**
+- When a file is dragged over the application window button, the application windows is activated, so the file can easily be droppped there
+- Application setting `InvertBlackIcons`, `StartupTheme`, `MenuPopupWidth`, `MenuPopupMaxHeight`.
+- Special application setting `Language`
+
+### Changed ###
+- **Major UI rework**
+- Removed application setting `SearchResultPanelWidth`
+
+### Fixed ###
+- Fixed the inconsistency in AppUI for some pinned applications and "their" windows causing that the window button didn't "replace" the button of pinned app. Now the win32 app resolver is used also when retrieving the pinned apps if needed
+- Fixed the handling of "shell targets" - installed applications having executable in form `::{guid}`
+- Application button autosize - `ButtonMinWidthRatio` of `AppButtonsPanel` was not bound to `Settings.AppBarButtonMinWidthRatio` but had a constant value 0.7, so the settings was ignored
 
 ## [1.3.1] - 2022-10-28 ##
 ### Fixed ###
@@ -78,6 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added ###
 - Initial application release
 
+[2.0.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.3.1...v2.0.0
 [1.3.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.0...v1.2.1

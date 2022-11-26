@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Windows;
 using net.adamec.ui.AppSwitcherBar.AppBar;
+
 // ReSharper disable IdentifierTypo
 // ReSharper disable CommentTypo
 
@@ -130,9 +131,14 @@ public interface IAppSettings
     Dictionary<string, string> GetKnowAppIds();
 
     /// <summary>
-    /// Flag whether the application will invert the white icons
+    /// Flag whether the application will invert the white icons when using light scheme
     /// </summary>
     bool InvertWhiteIcons { get; }
+
+    /// <summary>
+    /// Flag whether the application will invert the black icons when using dark scheme
+    /// </summary>
+    bool InvertBlackIcons { get; }
 
     /// <summary>
     /// Limits the number of items in single category of JumpList (not applied to Tasks)
@@ -175,9 +181,19 @@ public interface IAppSettings
     int SearchListCategoryLimit { get; }
 
     /// <summary>
-    /// Width of the panel presenting the search results
+    /// Width of the menu popup
     /// </summary>
-    int SearchResultPanelWidth { get; }
+    int MenuPopupWidth { get; }
+
+    /// <summary>
+    /// Max height of the menu popup
+    /// </summary>
+    int MenuPopupMaxHeight { get; }
+
+    /// <summary>
+    /// Theme to be used on application startup 
+    /// </summary>
+    StartupThemeEnum StartupTheme { get; }
 
     //---------------------------------------------------------------------
 

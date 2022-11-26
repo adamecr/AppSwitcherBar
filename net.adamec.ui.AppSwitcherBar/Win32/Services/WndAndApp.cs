@@ -256,6 +256,35 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
         }
 
         /// <summary>
+        /// Gets the application user model ID for the shell item representing a shortcut (link)
+        /// Uses the undocumented win32 api, so it might change or not work as expected
+        /// </summary>
+        /// <param name="shellItem">A shell item representing a shortcut (link).</param>
+        /// <returns>Application user mode ID when available for given <paramref name="shellItem"/> or null</returns>
+        public static string? GetWindowApplicationUserModelId(IShellItem2 shellItem)
+        {
+            IApplicationResolver? appResolver = null;
+            try
+            {
+                // ReSharper disable once SuspiciousTypeConversion.Global
+                appResolver = (IApplicationResolver)new CApplicationResolver();
+                var hr = appResolver.GetAppIDForShortcut(shellItem, out var appId);
+                return hr.IsSuccess && !string.IsNullOrEmpty(appId) ? appId : null;
+            }
+            catch (Exception)
+            {
+                return null; //just return null
+            }
+            finally
+            {
+                if (appResolver != null && Marshal.IsComObject(appResolver))
+                {
+                    Marshal.ReleaseComObject(appResolver);
+                }
+            }
+        }
+
+        /// <summary>
         /// Get the icon of window with given <paramref name="hwnd"/>
         /// </summary>
         /// <param name="hwnd">HWND of the window</param>

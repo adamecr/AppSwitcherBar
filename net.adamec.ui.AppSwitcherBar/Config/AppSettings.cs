@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using net.adamec.ui.AppSwitcherBar.AppBar;
+using net.adamec.ui.AppSwitcherBar.ViewModel;
+
 // ReSharper disable IdentifierTypo
 // ReSharper disable CommentTypo
 
@@ -16,10 +19,10 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// <summary>
         /// Design time app settings
         /// </summary>
-        public static AppSettings DesignTimeAppSettings { get; } = new()
-        {
-            AppBarAutoSize = false
-        };
+        public static AppSettings DesignTimeAppSettings { get; } = new (settings => {
+            settings.AppBarAutoSize = false;
+            settings.FeatureFlags![MenuPopupViewModel.FF_EnableColorsInMenuPopup] = true.ToString();
+        });
 
         /// <summary>
         /// Flag whether to show the application in the task bar (default is true)
@@ -172,9 +175,14 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         }
 
         /// <summary>
-        /// Flag whether the application will invert the white icons (default is true)
+        /// Flag whether the application will invert the white icons when using light scheme (default is true)
         /// </summary>
         public bool InvertWhiteIcons { get; set; } = true;
+       
+        /// <summary>
+        /// Flag whether the application will invert the black icons when using dark scheme (default is true)
+        /// </summary>
+        public bool InvertBlackIcons { get; set; } = true;
 
         /// <summary>
         /// Limits the number of items in single category of JumpList (not applied to Tasks) (default is 10)
@@ -217,9 +225,24 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         public int SearchListCategoryLimit { get; set; } = 5;
 
         /// <summary>
-        /// Width of the panel presenting the search results (default is 400)
+        /// Width of the menu popup (default is 400)
         /// </summary>
-        public int SearchResultPanelWidth { get; set; } = 400;
+        public int MenuPopupWidth { get; set; } = 400;
+
+        /// <summary>
+        /// Max height of the menu popup (default is 600)
+        /// </summary>
+        public int MenuPopupMaxHeight { get; set; } = 600;
+
+        /// <summary>
+        /// Theme to be used on application startup (default is System)
+        /// </summary>
+        public StartupThemeEnum StartupTheme { get; set; } = StartupThemeEnum.System;
+
+        /// <summary>
+        /// Name of default culture used to retrieve the translated texts - the current culture name
+        /// </summary>
+        public static string DefaultLanguage = CultureInfo.CurrentCulture.Name;
 
         //---------------------------------------------------------------------
 
@@ -234,6 +257,15 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         public AppSettings()
         {
             UserSettings = new UserSettings(this);
+        }
+
+        /// <summary>
+        /// CTOR - allowing to configure the settings on creation
+        /// </summary>
+        private AppSettings(Action<AppSettings>? options)
+        {
+            UserSettings = new UserSettings(this);
+            options?.Invoke(this);
         }
     }
 }

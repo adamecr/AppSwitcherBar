@@ -3,6 +3,7 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using net.adamec.ui.AppSwitcherBar.Config;
+using net.adamec.ui.AppSwitcherBar.Views;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Startup;
 
@@ -46,7 +47,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <summary>
         /// Gets the <see cref="MainViewModel"/> for <see cref="MainWindow"/>
         /// When running in runtime, it's retrieved from DI.
-        /// When running in design time a new instance of <see cref="MainViewModel"/> with default <see cref="AppSettings"/> and dummy logger is used
+        /// When running in design time a new instance of <see cref="MainViewModel"/> is used with default <see cref="AppSettings"/> and dummy logger and dummy services 
         /// </summary>
         /// <remarks>No need to mock whole model/class for design time, just use the default settings and design time logger</remarks>
         public MainViewModel MainViewModel => IsDesignTime ?
@@ -54,8 +55,25 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                     designTimeAppSettings,
                     designTimeLogger,
                     new DummyJumpListService(),
-                    new DummyStartupService()) :
+                    new LanguageService(null),
+                    new BackgroundDataService(designTimeLogger)) :
                 App.ServiceProvider.GetRequiredService<MainViewModel>();
+
+        /// <summary>
+        /// Gets the <see cref="MenuPopupViewModel"/> for <see cref="MenuPopup"/>
+        /// When running in runtime, it's retrieved from DI.
+        /// When running in design time a new instance of <see cref="MenuPopupViewModel"/> is used with default <see cref="AppSettings"/>  and dummy services
+        /// </summary>
+        /// <remarks>No need to mock whole model/class for design time, just use the default settings and design time logger</remarks>
+        public MenuPopupViewModel MenuPopupViewModel => IsDesignTime ?
+            new MenuPopupViewModel(
+                MainViewModel,
+                designTimeAppSettings,
+                designTimeLogger,
+                new DummyStartupService(),
+                new LanguageService(null),
+                new BackgroundDataService(designTimeLogger)) :
+            App.ServiceProvider.GetRequiredService<MenuPopupViewModel>();
     }
 }
 

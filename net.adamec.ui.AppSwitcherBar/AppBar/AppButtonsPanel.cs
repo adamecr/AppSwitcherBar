@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using net.adamec.ui.AppSwitcherBar.Wpf;
+using net.adamec.ui.AppSwitcherBar.WpfExt;
 
 namespace net.adamec.ui.AppSwitcherBar.AppBar;
 

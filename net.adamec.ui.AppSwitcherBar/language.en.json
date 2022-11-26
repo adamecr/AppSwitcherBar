@@ -1,0 +1,37 @@
+{
+  "Language": {
+    "Translations": {
+      "MenuPopupHidePopup": "Hide popup",
+      "MenuPopupSearch": "Search",
+      "MenuPopupSettings": "Settings",
+      "MenuPopupColors": "Colors",
+      "MenuPopupApps": "Applications",
+      "MenuPopupToggleDesktop": "Toggle desktop",
+      "MenuPopupToggleTheme": "Toggle theme",
+      "MenuPopupExit": "Exit app",
+      "MenuPopupSettingsRefresh": "Refresh",
+      "MenuPopupSettingsRunOnStartup": "Run on Win start",
+      "MenuPopupSettingsAutoSize": "Auto size",
+
+      "EdgeLeft": "Left",
+      "EdgeRight": "Right",
+      "EdgeTop": "Top",
+      "EdgeBottom": "Bottom",
+
+      "SearchCategoryWindows": "Windows",
+      "SearchCategoryPinnedApps": "Pinned applications",
+      "SearchCategoryInstalledApps": "Applications",
+      "SearchCategoryInstalledDocs": "Documents",
+
+      "JumpListMenuCloseWindow": "Close window",
+      "JumpListMenuCancel": "Cancel",
+      "JumpListCategoryTasks": "Tasks",
+      "JumpListCategoryPinned": "Pinned",
+      "JumpListCategoryRecent": "Recent",
+      "JumpListCategoryFrequent": "Frequent",
+
+      "CustomMostVisited": "Most visited",
+      "CustomRecentlyClosed": "Recently closed"
+    }
+  }
+}     

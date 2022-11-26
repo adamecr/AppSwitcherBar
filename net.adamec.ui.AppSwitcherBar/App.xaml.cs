@@ -9,6 +9,8 @@ using net.adamec.ui.AppSwitcherBar.Config;
 using net.adamec.ui.AppSwitcherBar.ViewModel;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Startup;
+using Wpf.Ui.Mvvm.Contracts;
+using Wpf.Ui.Mvvm.Services;
 
 namespace net.adamec.ui.AppSwitcherBar
 {
@@ -44,17 +46,41 @@ namespace net.adamec.ui.AppSwitcherBar
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-
+          
             host = Host
                 .CreateDefaultBuilder(e.Args)
+                .ConfigureHostConfiguration(config =>
+                {
+                    //add appsettings.json to host configuration to be able to get the Language when building the app configuration
+                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false); 
+                    
+                })
                 .ConfigureAppConfiguration(config =>
                 {
                     config.AddJsonFile(UserSettings.UserSettingsFile, optional: true);
+                })
+                .ConfigureAppConfiguration((ctx, config) =>
+                {
+                    //check Language|AppSettings:Language|current culture and try to read language from language.{id}.json
+                    //the language can be specified like "en", "en-US", or with additional extensions "lang-region-extension-...".
+                    //it will try to load the config from "all parts" from less to more specific - for example for "en-US", it will try language.en.json and language.en-us.json
+                    var language =
+                        ctx.Configuration[$"Language"] ?? //as the host configuration have the json as most specific, don't use prefix in command line to be able to override the json appsettings
+                        ctx.Configuration[$"{nameof(AppSettings)}:Language"] ??
+                        AppSettings.DefaultLanguage;
+
+                    var languageParts = language.Split('-');
+                    for (var i = 0; i < languageParts.Length; i++)
+                    {
+                        var languageId = string.Join('-', languageParts[..(i + 1)]);
+                        config.AddJsonFile($"language.{languageId}.json", optional: true);
+                    }
                 })
                 .ConfigureServices((context, services) =>
                 {
                     ConfigureServices(context.Configuration, services);
                 })
+                // ReSharper disable once UnusedParameter.Local
                 .ConfigureLogging(logging =>
                 {
                     // Add other loggers...
@@ -116,12 +142,17 @@ namespace net.adamec.ui.AppSwitcherBar
         {
             //Register configuration objects
             services.Configure<AppSettings>(configuration.GetSection(nameof(AppSettings)));
+            services.Configure<Language>(configuration.GetSection(nameof(Language)));
 
             //Register services
-            if (bool.TryParse(configuration["AppSettings:FeatureFlags:JumpList"], out var hasJumpList) && hasJumpList)
+            services.AddSingleton<IThemeService, ThemeService>();
+            services.AddSingleton<ILanguageService, LanguageService>();
+            services.AddSingleton<IBackgroundDataService, BackgroundDataService>();
+
+            if (bool.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:JumpList"], out var hasJumpList) && hasJumpList)
             {
                 var jumpListSvcVersion =
-                    int.TryParse(configuration["AppSettings:FeatureFlags:JumpListSvcVersion"], out var parsedVersion)
+                    int.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:JumpListSvcVersion"], out var parsedVersion)
                         ? parsedVersion
                         : 2;
 
@@ -143,7 +174,7 @@ namespace net.adamec.ui.AppSwitcherBar
                 services.AddSingleton<IJumpListService, DummyJumpListService>();
             }
 
-            if (bool.TryParse(configuration["AppSettings:FeatureFlags:RunOnWindowsStartup"], out var hasWinStartup) && hasWinStartup)
+            if (bool.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:RunOnWindowsStartup"], out var hasWinStartup) && hasWinStartup)
             {
                 services.AddSingleton<IStartupService, StartupService>();
             }
@@ -154,6 +185,7 @@ namespace net.adamec.ui.AppSwitcherBar
 
             // Register app ViewModels
             services.AddSingleton<MainViewModel>();
+            services.AddSingleton<MenuPopupViewModel>();
 
             // Register app Windows
             services.AddSingleton<MainWindow>();
