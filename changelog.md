@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.1] - 2022-11-28 ##
+### Fixed ###
+- [Settings reset on start in version 2.0](https://github.com/adamecr/AppSwitcherBar/issues/5) - the desing time settings (used by WPF designer) are not saved at all now
+- 
 ## [2.0.0] - 2022-11-26 ##
 ### Added ###
 - **Support for Dark and Light UI theme.** 
@@ -93,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added ###
 - Initial application release
 
+[2.0.1]: https://github.com/adamecr/AppSwitcherBar/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.3.1...v2.0.0
 [1.3.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.2.1...v1.3.0

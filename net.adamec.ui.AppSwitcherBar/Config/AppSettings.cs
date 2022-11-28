@@ -22,7 +22,7 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         public static AppSettings DesignTimeAppSettings { get; } = new (settings => {
             settings.AppBarAutoSize = false;
             settings.FeatureFlags![MenuPopupViewModel.FF_EnableColorsInMenuPopup] = true.ToString();
-        });
+        }, true);
 
         /// <summary>
         /// Flag whether to show the application in the task bar (default is true)
@@ -262,9 +262,11 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// <summary>
         /// CTOR - allowing to configure the settings on creation
         /// </summary>
-        private AppSettings(Action<AppSettings>? options)
+        /// <param name="options">Optional action allowing to override the settings</param>
+        /// <param name="isDesignTime">Flag whethere the user settings if used in design time - this will block saving them</param>
+        private AppSettings(Action<AppSettings>? options, bool isDesignTime = false)
         {
-            UserSettings = new UserSettings(this);
+            UserSettings = new UserSettings(this, isDesignTime);
             options?.Invoke(this);
         }
     }

@@ -55,10 +55,7 @@ namespace net.adamec.ui.AppSwitcherBar
                     config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false); 
                     
                 })
-                .ConfigureAppConfiguration(config =>
-                {
-                    config.AddJsonFile(UserSettings.UserSettingsFile, optional: true);
-                })
+               
                 .ConfigureAppConfiguration((ctx, config) =>
                 {
                     //check Language|AppSettings:Language|current culture and try to read language from language.{id}.json
@@ -75,6 +72,8 @@ namespace net.adamec.ui.AppSwitcherBar
                         var languageId = string.Join('-', languageParts[..(i + 1)]);
                         config.AddJsonFile($"language.{languageId}.json", optional: true);
                     }
+
+                    config.AddJsonFile(UserSettings.UserSettingsFile, optional: true);
                 })
                 .ConfigureServices((context, services) =>
                 {

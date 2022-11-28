@@ -11,9 +11,9 @@
 		<RepositoryUrl>https://github.com/adamecr/AppSwitcherBar</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/adamecr/AppSwitcherBar</PackageProjectUrl>
 		<Product>AppSwitcherBar</Product>
-		<Version>2.0.0</Version>
-		<AssemblyVersion>2.0.0</AssemblyVersion>
-		<FileVersion>2.0.0</FileVersion>
+		<Version>2.0.1</Version>
+		<AssemblyVersion>2.0.1</AssemblyVersion>
+		<FileVersion>2.0.1</FileVersion>
 		<ApplicationIcon>AppSwitcherBar.ico</ApplicationIcon>
 		<AssemblyName>AppSwitcherBar</AssemblyName>
 		<Platforms>AnyCPU;x64</Platforms>

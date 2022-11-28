@@ -97,10 +97,16 @@ public class UserSettings
     private bool isDirty;
 
     /// <summary>
+    /// Flag whethere the user settings if used in design time - this will block saving them
+    /// </summary>
+    private readonly bool isDesignTime;
+
+    /// <summary>
     /// CTOR
     /// </summary>
     /// <param name="appSettings">Application settings to be used as initial source of configuraiton</param>
-    public UserSettings(IAppSettings appSettings)
+    /// <param name="isDesignTime">Flag whethere the user settings if used in design time - this will block saving them</param>
+    public UserSettings(IAppSettings appSettings,bool isDesignTime=false)
     {
         var executablePath = Environment.ProcessPath;
         var executableDir = executablePath != null ? Path.GetDirectoryName(executablePath) : null;
@@ -111,7 +117,8 @@ public class UserSettings
         AppBarDockedWidth = appSettings.AppBarDockedWidth;
         appBarDockedHeight = appSettings.AppBarDockedHeight;
 
-        Save();
+        this.isDesignTime=isDesignTime;
+        if(!isDesignTime) Save();
     }
 
     /// <summary>
@@ -120,7 +127,7 @@ public class UserSettings
     /// <returns>True when saved successfully otherwise false</returns>
     public bool Save()
     {
-        if (!isDirty || string.IsNullOrEmpty(fileName)) return false;
+        if (isDesignTime || !isDirty || string.IsNullOrEmpty(fileName)) return false;
 
         try
         {
