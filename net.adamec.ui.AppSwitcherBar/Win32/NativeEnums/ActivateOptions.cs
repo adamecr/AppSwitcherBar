@@ -1,8 +1,10 @@
 ﻿
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Global
-
+// ReSharper disable CommentTypo
+// ReSharper disable IdentifierTypo
 using System;
+
 
 namespace net.adamec.ui.AppSwitcherBar.Win32.NativeEnums
 {

@@ -50,6 +50,7 @@ namespace net.adamec.ui.AppSwitcherBar.Config
             SetTranslation(TranslationKeys.MenuPopupSettings, "Settings");
             SetTranslation(TranslationKeys.MenuPopupColors, "Colors");
             SetTranslation(TranslationKeys.MenuPopupApps, "Applications");
+            SetTranslation(TranslationKeys.MenuPopupPins, "Pinned apps");
             SetTranslation(TranslationKeys.MenuPopupToggleDesktop, "Toggle desktop");
             SetTranslation(TranslationKeys.MenuPopupToggleTheme, "Toggle theme");
             SetTranslation(TranslationKeys.MenuPopupExit, "Exit app");
@@ -73,6 +74,10 @@ namespace net.adamec.ui.AppSwitcherBar.Config
             SetTranslation(TranslationKeys.JumpListCategoryPinned, "Pinned");
             SetTranslation(TranslationKeys.JumpListCategoryRecent, "Recent");
             SetTranslation(TranslationKeys.JumpListCategoryFrequent, "Frequent");
+            
+            SetTranslation(TranslationKeys.AudioIsDefault, "Default device");
+            SetTranslation(TranslationKeys.AudioSetDefault, "Set as default device");
+            SetTranslation(TranslationKeys.AudioIsCommDefault, "Default comm device");
         }
 
         /// <summary>

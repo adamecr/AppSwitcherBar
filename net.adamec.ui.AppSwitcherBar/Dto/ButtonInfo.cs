@@ -1,5 +1,7 @@
-﻿using System;
+﻿using net.adamec.ui.AppSwitcherBar.Dto.Search;
+using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Media.Imaging;
 
@@ -8,7 +10,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto;
 /// <summary>
 /// Information about the button representing the window (task bar application) or pinned application
 /// </summary>
-public abstract class ButtonInfo : INotifyPropertyChanged
+public abstract class ButtonInfo : INotifyPropertyChanged, ISearchable
 {
 
     /// <summary>
@@ -107,6 +109,33 @@ public abstract class ButtonInfo : INotifyPropertyChanged
             }
         }
     }
+
+    /// <summary>
+    /// Search sort key
+    /// </summary>
+    public virtual string SearchSortKey
+    {
+        get
+        {
+            var modificationTime = DateTime.MinValue;
+
+            if (!string.IsNullOrEmpty(Executable) && File.Exists(Executable))
+            {
+                modificationTime = File.GetLastWriteTime(Executable);
+            }
+            if (ShellProperties.IsStoreApp && !string.IsNullOrEmpty(ShellProperties.PackageInstallPath) && Directory.Exists(ShellProperties.PackageInstallPath))
+            {
+                modificationTime = Directory.GetLastWriteTime(ShellProperties.PackageInstallPath);
+            }
+
+            return RunStats.BuildStandardSearchSortKey(modificationTime);
+        }
+    }
+
+    /// <summary>
+    /// Application run statistics
+    /// </summary>
+    public RunStats RunStats { get; } = new();
 
     /// <summary>
     /// Identifier of the <see cref="Group"/> before the change by <see cref="UpdateGroup"/> after <see cref="AppId"/> change

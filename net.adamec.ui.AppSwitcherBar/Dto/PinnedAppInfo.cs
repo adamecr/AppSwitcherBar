@@ -28,6 +28,11 @@ public class PinnedAppInfo : ButtonInfo
     public string? LinkFile { get; }
 
     /// <summary>
+    /// Folder in the Start menu pins - empty string when not in folder
+    /// </summary>
+    public string StartFolder { get; }
+
+    /// <summary>
     /// <see cref="ButtonInfo.Group"/> fallback when neither AppId not Executable is known or not set yet
     /// </summary>
     protected override string GroupFallback => (PinnedAppType == PinnedAppTypeEnum.Link ? ShellProperties.LinkTargetParsingPath : ShellProperties.ApplicationUserModelId) ?? "unknown";
@@ -42,7 +47,8 @@ public class PinnedAppInfo : ButtonInfo
     /// <param name="appId">Application ID</param>
     /// <param name="executable">Application executable</param>
     /// <param name="isDarkScheme">Flag whether app uses the dark scheme (true) or light scheme (false) - used to choose white or black priority contrast for icon</param>
-    public PinnedAppInfo(string title, int order, PinnedAppTypeEnum pinnedAppType, ShellPropertiesSubset shellProperties, string? appId,string? executable, bool isDarkScheme)
+    /// <param name="startFolder">Optional name of folder in Start menu</param>
+    public PinnedAppInfo(string title, int order, PinnedAppTypeEnum pinnedAppType, ShellPropertiesSubset shellProperties, string? appId,string? executable, bool isDarkScheme, string? startFolder=null)
         : base(title, executable, null)
     {
         PinnedAppIndex = order;
@@ -50,6 +56,7 @@ public class PinnedAppInfo : ButtonInfo
         ShellProperties = shellProperties;
         AppId = appId;
         LinkFile = shellProperties.ParsingPath;
+        StartFolder = startFolder ?? string.Empty;
 
         if (pinnedAppType == PinnedAppTypeEnum.Link)
         {
@@ -100,6 +107,7 @@ public class PinnedAppInfo : ButtonInfo
             if (PinnedAppType == PinnedAppTypeEnum.Package)
             {
                 Package.ActivateApplication(AppId, null, out _);
+                RunStats.UpdateLaunched();
             }
             else
             {
@@ -110,6 +118,7 @@ public class PinnedAppInfo : ButtonInfo
                     UseShellExecute = true
                 };
                 Process.Start(startInfo);
+                RunStats.UpdateLaunched();
             }
         }
         catch (Exception exception)

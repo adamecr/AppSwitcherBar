@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using net.adamec.ui.AppSwitcherBar.AppBar;
-using net.adamec.ui.AppSwitcherBar.ViewModel;
 
 // ReSharper disable IdentifierTypo
 // ReSharper disable CommentTypo
@@ -17,11 +16,70 @@ namespace net.adamec.ui.AppSwitcherBar.Config
     public class AppSettings : IAppSettings
     {
         /// <summary>
+        /// Name of the Feature Flag for windows anonymization
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_AnonymizeWindows = "AnonymizeWindows";
+
+        /// <summary>
+        /// Name of the Feature Flag for using the undocumented application resolver to get the app it
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_UseApplicationResolver = "UseApplicationResolver";
+
+        /// <summary>
+        /// Name of the Feature Flag for keeping the menu popup open even when another app is active
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_KeepMenuPopupOpen = "KeepMenuPopupOpen";
+
+        /// <summary>
+        /// Name of the Feature Flag for enabling the color panel in menu popup
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_EnableColorsInMenuPopup = "EnableColorsInMenuPopup";
+        
+        /// <summary>
+        /// Name of the Feature Flag for enabling the jumplist support
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_JumpList = "JumpList"; 
+        
+        /// <summary>
+        /// Name of the Feature Flag for setting the jumplist service version
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_JumpListSvcVersion = "JumpListSvcVersion"; 
+        
+        /// <summary>
+        /// Name of the Feature Flag for enabling the run on windows startup functionality
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_RunOnWindowsStartup = "RunOnWindowsStartup";
+
+        /// <summary>
+        /// Name of the Feature Flag for enabling the run on windows startup functionality
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_EnableRunInfoFromWindowsPrefetch = "EnableRunInfoFromWindowsPrefetch";
+
+        /// <summary>
+        /// Name of the Feature Flag for enabling the color panel in menu popup
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_EnableStartMenuPins = "EnableStartMenuPins";   
+        /// <summary>
+        /// Name of the Feature Flag for enabling the window's context menu on the thumbnail
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        public const string FF_EnableContextMenuOnThumbnail = "EnableContextMenuOnThumbnail";
+
+        /// <summary>
         /// Design time app settings
         /// </summary>
         public static AppSettings DesignTimeAppSettings { get; } = new (settings => {
             settings.AppBarAutoSize = false;
-            settings.FeatureFlags![MenuPopupViewModel.FF_EnableColorsInMenuPopup] = true.ToString();
+            settings.FeatureFlags![FF_EnableColorsInMenuPopup] = true.ToString();
         }, true);
 
         /// <summary>
@@ -243,6 +301,66 @@ namespace net.adamec.ui.AppSwitcherBar.Config
         /// Name of default culture used to retrieve the translated texts - the current culture name
         /// </summary>
         public static string DefaultLanguage = CultureInfo.CurrentCulture.Name;
+
+        /// <summary>
+        /// Flag whether to show the audio device info and settings in the app bar (default is true)
+        /// </summary>
+        public bool ShowAudioControls { get; set; } = true;
+
+        /// <summary>
+        /// Width of audio controls popup (default is 300)
+        /// </summary>
+        public int AudioControlsPopupWidth { get; set; } = 300;
+
+        /// <summary>
+        /// Flag whether to show the clock in the app bar (default is true)
+        /// </summary>
+        public bool ShowClock { get; set; } = true;
+
+        /// <summary>
+        /// Width of clock control in the app bar (default is 80)
+        /// </summary>
+        public int ClockWidth { get; set; } = 80;
+
+        /// <summary>
+        /// Width of clock popup (default is 200)
+        /// </summary>
+        public int ClockPopupWidth { get; set; } = 200;
+
+        /// <summary>
+        /// Refresh interval (in milliseconds) to update clock (default is 250)
+        /// </summary>
+        public int RefreshClockIntervalMs { get; set; } = 250;
+
+        /// <summary>
+        /// Clock control date format. Keep empty to hide the date (default is dd.MM.yyyy)
+        /// </summary>
+        public string? ClockDateFormat { get; set; } = "d.M.yyyy";
+
+        /// <summary>
+        /// Clock control time format. Keep empty to hide the time (default is HH:mm)
+        /// </summary>
+        public string? ClockTimeFormat { get; set; } = "H:mm";
+
+        /// <summary>
+        /// Clock control long date and time format.
+        /// </summary>
+        public string? ClockLongFormat { get; } = "dddd d. MMMM yyyy";
+
+        /// <summary>
+        /// Time zones collection name-TZ ID (default is empty)
+        /// </summary>
+        public Dictionary<string, string>? ClockTimeZones { get; } = new();
+
+        /// <summary>
+        /// Clock control date format to be used for time zone (default is ddd d.M.)
+        /// </summary>
+        public string? ClockTimeZoneDateFormat { get; } = "ddd d.M.";
+
+        /// <summary>
+        /// Clock control time format to be used for time zone (default is H:mm)
+        /// </summary>
+        public string? ClockTimeZoneTimeFormat { get; } = "H:mm";
 
         //---------------------------------------------------------------------
 

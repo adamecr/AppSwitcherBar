@@ -20,14 +20,4 @@ public class DummyJumpListService : IJumpListService
     {
         return Array.Empty<LinkInfo>();
     }
-
-    /// <summary>
-    /// Gets the information about the applications pinned to the taskbar - does nothing, just returns an empty array
-    /// </summary>
-    /// <param name="knownFolders">Information about the known folder paths and GUIDs</param>
-    /// <returns>Empty Array of information about applications pinned to the taskbar</returns>
-    public PinnedAppInfo[] GetPinnedApplications(StringGuidPair[] knownFolders)
-    {
-        return Array.Empty<PinnedAppInfo>();
-    }
 }

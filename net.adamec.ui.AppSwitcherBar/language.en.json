@@ -6,6 +6,7 @@
       "MenuPopupSettings": "Settings",
       "MenuPopupColors": "Colors",
       "MenuPopupApps": "Applications",
+      "MenuPopupPins": "Pinned apps",
       "MenuPopupToggleDesktop": "Toggle desktop",
       "MenuPopupToggleTheme": "Toggle theme",
       "MenuPopupExit": "Exit app",
@@ -31,7 +32,11 @@
       "JumpListCategoryFrequent": "Frequent",
 
       "CustomMostVisited": "Most visited",
-      "CustomRecentlyClosed": "Recently closed"
+      "CustomRecentlyClosed": "Recently closed",
+
+      "AudioIsDefault": "Default device",
+      "AudioSetDefault": "Set as default device",
+      "AudioIsCommDefault": "Default comm device"
     }
   }
-}     
+}

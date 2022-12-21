@@ -8,25 +8,34 @@ I did not use any invasive techniques that replace the Win11 task bar as I use W
 
 ## Quick Start ##
 To start `AppSwitcherBar`, just run `AppSwitcherBar.exe`. 
+
+![Main AppSwitcherBar window](doc/img/AppSwitcherBar.png)
+
 Main features
  - Top level **application windows** are presented as **buttons within the bar**
  - **Applications pinned to task bar** without any window open are presented as transparent background buttons with title in italics. **Click** on the button to launch the pinned application.
  - The buttons for windows of the same applications are displayed together but there is always a button for each top level window (this is called grouping here)
  - Optionally, it's possible to hide the applications (buttons) having only single window (use `HideSingleWindowApps` setting). When the pinned applications support is on and the application has a pin, it will be not be hiden even having a single window.
- - **Click** on the application window button **to switch to application** or to minimize the window of foreground applicaiton
+ - **Click** on the application window button **to switch to application** or to minimize the window of foreground application
  - When a **file is dragged over** the application window button, the application windows is activated, so the file can easily be droppped there
  - **Hover the mouse** over the application window button **to show the live thumbnail** of the window
+   - **Click** on the thumbnail **to switch to application** or to minimize the window of foreground application
+   - Use the **close icon** at the thumbnail to **close the window**.
  - **Drag and drop** (using mouse and left button) the application window buttons **to reorder** them. You can reorder the same application windows ("within group") or the whole applications ("groups")
  - **Right click** on the application window button for the context menu with possibility to **close the window**, **start a new application instance** or **launch** the (recent) **item or task from JumpList**.
  - Click on the **hamburger** icon to show the menu (the search panel is open by default)
  
  ### Menu ###
+
+ ![Menu popup](doc/img/Menu.png)
+
  - Click on the **desktop** icon to toggle the desktop
  - Click on the **search** icon and search for the text in window caption and name of pinned or installed application.
    - Click on the item in the search result to switch to window or launch the app. 
    - Press `ESC` key to clear the search text. When the search text is empty, it will close the search
    - Press `Enter` key to "execute" the search result shown in bold. `Up`, `Down`, `PgUp`, `PgDn` keys will move the selection
    - Use `w:` prefix to search in windows only and `a:` prefix to search the applications only
+ - Click on the **pin** icon to show the list of applications pinned to Windows Start and launch them
  - Click on the **applications** icon to show the list of applications (and documents) available in the Windows Start menu
    - Click on the item in the list to lauch the application or document
    - Click on the folder item to expand/collapse the folder
@@ -37,6 +46,7 @@ Main features
    - **Choose the monitor** where to display the `AppSwitcherBar`
    - Enable/disable bar and application window button **auto-size**
    - Enable/disable **starting** the `AppSwitcherBar` **on Windows start**
+   - **Refresh** the list of installed applications and applications pinned to Windows Taskbar and Start
  - Click on the **power** icon to close the `AppSwitcherBar`.
  - Use the icon at the top to show/hide the button labels
  - To **close menu**
@@ -44,6 +54,17 @@ Main features
    - Use the icon with arrow down in the menu or
    - Press `Ecs` key when in search and there is no text to search for (or press `Ecs` twice - first to clear the search text)
 
+ ### Additional panels ###
+
+![Additional panels](doc/img/AdditionalControls.png)
+- Hover over the clock to see the time in addtional **time zones** if defined in settings
+- The mike and speaker icons indicates whether the default audio device is muted or not, the small accented icon also indicates that the **audio device is in use** by any application (for example - some application is capturing the mike)
+- Click on the mike or speaker icon to **toggle mute** of the device
+- Use the mouse wheel over mike or speaker icon to **adjust volume** of the device
+- Right click on the mike or speaker icon to show the information about all **audio devices** (capture on mike icon and render on speaker icon).
+  - Click on the device panel to set the **default audio device**.
+  - Use the mouse wheel to **adjust volume** of the device
+  - Use the click on mike or speaker icon to toggle mute of the device 
 
  ## Features ##
 `AppSwitcherBar` will create the application bar (window) and dock it to the edge of monitor as configured in application settings (bottom edge is the default). When there is a Windows Taskbar at the same edge, the application bar is placed "besides" towards the screen content. The application bar behaves similar way like the Taskbar - it will reduce the area for the other applications so they will not overlap even when maximized.
@@ -58,7 +79,7 @@ Click to window button to make it active (foreground). Clicking to the button of
 
 The windows of the "same" applications don't group into single button (well, that's why I built the app), however the `AppSwitchBar` puts the application windows belonging to the same process together (that's what "grouping" is in context of `AppSwitchBar`).
 
-Hovering over the button pops up the live thumbnail of the application window. Also the full window title is available in tool-tip when hovering the mouse over the button (the title within the button can be cropped to fit the button size).
+Hovering over the button pops up the live thumbnail of the application window. Also the full window title is available in tool-tip when hovering the mouse over the button (the title within the button can be cropped to fit the button size). Click to thumbnail to switch to application window or minimize the window if it's foreground one. Use the close icon overlay to close the application window. When the feature flag `EnableContextMenuOnThumbnail` is set, the right click on the thumbnail shows the system context menu of the window the thumbnail belongs to.
 
 ![Application window thumbnail](doc/img/Thumbnail.png)
 
@@ -105,10 +126,35 @@ The first search result is by default selected and marked with bold caption. Pre
 
 The search functionality can be disabled using the `AllowSearch` setting. The settings also allow to set the `SearchResultPanelWidth` and number of items per category (`SearchListCategoryLimit`).
 
+The search results are sorted by a rank created from
+ - timestamp, when the window/application was last on foreground. This is updated each time the foreground window change is identified during periodical evaluation of application windows
+ - count of runs and the last run date. This is updated when a application is launched from `AppSwitcherBar`.
+ - last modified date of the application executable or application directory for Store apps.
+
+``` csharp
+var sortKey = $"{LastForegroundDateTime:yyyyMMddHHmmss}{runs:###}{LastRunDateTime:yyyyMMddHHmm}{lastModifiedDateTime:yyyyMMddHH}"
+```
+
+The run statistics used for building the search key are not persisted between `AppSwitcherBar` runs.
+
+It's possible to use feature flag `EnableRunInfoFromWindowsPrefetch` to load the information from Windows Prefetch when retrieving the information about the installed/pinned applications. It tries to go through all Prefetch files "belonging" to the application executable (meaning that the hash code part of the Prefetch file is ignored) and extract the last run timestamp and run counter. In case there are multiple prefetch files, the most recent run timestamp is used and the sum of all run counters. In case the Prefetch file doesn't exist or data can't be retrieved, the default statistics with zero runs and `DateTime.MinValue` as timestamp are used. 
+
+*Note: Make sure the user running the `AppSwitcherBar` has the read access to `Windows\Prefetch` directory when using the Prefetch data for search ranking (users don't have the access by default)!*
+
+#### Windows Start pinned applications ####
+
+When enabled by feature flag `EnableStartMenuPins`, the list of applications pinned to Windows Start is retrieved and listed in menu popup pins panel. Click to the application to launch it. On Windows 10, the folders present the tile groups, click on the folder item to expand/collapse the folder. Windows 11 Start pinned application folders are not supported (can't retrieve the information about folders).
+
+![Start pinned applications](doc/img/StartPins.png)
+
+ The shortcuts at the bottom of application list represents - Documents, Pictures, Downloads, Run, Console/Terminal, Devices, Windows Settings. Use the icon right to the shortcuts to switch between the list and icons view.
+
 #### Application list ####
 Click on the applications icon to show the list of applications and documents available in the Windows Start menu. The items are grouped by the first letter (A-Z) plus `#` representing digits (0-9) and `~` for other characters, the list is sorted alphabetically. Click on the folder item to expand/collapse the folder, click on the item in the list to lauch the application or document. Use the letter key (A-Z) on the keyboard to quickly move within the list if any item starting with such letter exists.
 
-![JumpList menu](doc/img/AppList.png)
+![Applications list menu](doc/img/AppList.png)
+
+ The shortcuts at the bottom of application list represents - Documents, Pictures, Downloads, Run, Console/Terminal, Devices, Windows Settings.
 
 
 #### Settings ####
@@ -138,6 +184,33 @@ When the auto-size switch is on, the `AppSwitcherBar` auto-size itself as well a
 User settings are persisted to `appsettings.user.json` file in the application folder. The file contains the setting for dock position (edge), docked width and height and auto-size on/off switch. These values are used on the application start to keep the last used configuration.  
 
 Note: To reset the user settings, simply delete the file (make sure you delete the *appsettings.**user**.json* settings file, not the *appsettings.json* containing the full application settings).
+
+
+ ### Additional panels ###
+
+![Additional panels](doc/img/AdditionalControls.png)
+
+The clock panel can be enabled/disabled using the settings `ShowClock`. It shows the current date and time in format defines in settings `ClockDateFormat` and `ClockTimeFormat`. When a format is set to empty string, the date and/or time will not be shown. 
+
+Hover over the clock to see the time in addtional time zones if defined in settings. Time zones are defined as key-value pairs in `ClockTimeZones`. The key is (your) name of the time zone and value is ID of the time zones as recognized by Windows. Time zones are ordered by offset. Formats for the popup items are also configurable in settings - `ClockLongFormat` for local time zone "header", `ClockTimeZoneDateFormat` for date and `ClockTimeZoneTimeFormat` for time.
+
+![Clock popup](doc/img/ClockPopup.png)
+
+Enable or disable the audio panel in settings using `ShowAudioControls`. When enabled, audio panel shows mike and speaker icons representing default audio capture and audio render devices. The icon indicates whether the device is muted or not - click on the icon to toggle mute of the device. The bar under the icon indicates the volume level (gray when the device is muted). Use the mouse wheel to adjust volume of the device.
+
+![Audio in use](doc/img/AudioInUse.png)
+
+When a device is in use (for example any application is capturing the mike), it's signaled by a small accent color icon overlay. 
+
+Right click on the mike or speaker icon to show the information about all audio devices (capture on mike icon and render on speaker icon). The icon indicates the mute state, icon overlay indicates the device in use and the bar represents the volume level.
+
+![Audio popup](doc/img/AudioPopup.png)
+
+Click on the device panel to switch the default audio device. Use the mouse wheel to adjust volume and click to mike or speaker icon to toggle mute of the device. 
+
+*Note: The default communication device can't be set using the `AppSwitcherBar` as it's not implemented. In general, the change of default device is utilizing undocumented API `IPolicyConfig`.*
+
+
 
 ## Application Settings ##
 Besides the runtime configuration described above, it's possible to adjust the application settings stored in `appsettings.json` file in the application folder.
@@ -186,7 +259,27 @@ Besides the runtime configuration described above, it's possible to adjust the a
     "MenuPopupWidth": 400,
     "MenuPopupMaxHeight": 600,
 
-    "StartupTheme":"System"
+    "StartupTheme":"System",
+
+    "ShowAudioControls": true,
+    "AudioControlsPopupWidth": 300,
+
+    "ShowClock": true,
+    "ClockWidth": 80,
+    "ClockPopupWidth": 200,
+    "RefreshClockIntervalMs": 250,
+    "ClockDateFormat": "d.M.yyyy",
+    "ClockTimeFormat": "H:mm",
+    "ClockLongFormat": "dddd d. MMMM yyyy",
+    "ClockTimeZoneDateFormat": "ddd d.M.",
+    "ClockTimeZoneTimeFormat": "H:mm",
+
+    "ClockTimeZones": {
+      "SEA": "Pacific Standard Time",
+      "LON": "GMT Standard Time",
+      "PRG": "Central Europe Standard Time",
+      "MNL": "Singapore Standard Time"
+    },
 
     "FeatureFlags": {
       "JumpList": true,
@@ -194,7 +287,9 @@ Besides the runtime configuration described above, it's possible to adjust the a
       "AnonymizeWindows": true,
       "UseApplicationResolver": true,
       "EnableColorsInMenuPopup": false,
-      "KeepMenuPopupOpen": false
+      "KeepMenuPopupOpen": false,
+      "EnableRunInfoFromWindowsPrefetch":true,
+      "EnableContextMenuOnThumbnail":false
     },
 
     "AppIds": {
@@ -248,6 +343,18 @@ Besides the runtime configuration described above, it's possible to adjust the a
 - `MenuPopupWidth` - Width of the menu popup
 - `MenuPopupMaxHeight` - Maximal height of the menu popup
 - `StartupTheme` - `System`, `Light` or `Dark` theme to be used on application start.
+- `ShowAudioControls` - Flag whether to show the audio device info and settings in the app bar
+- `AudioControlsPopupWidth` - Width of audio controls popup
+- `ShowClock` - Flag whether to show the clock in the app bar
+- `ClockWidth` - Width of clock control in the app bar
+- `ClockPopupWidth` - Width of clock popup
+- `RefreshClockIntervalMs` - Refresh interval (in milliseconds) to update clock
+- `ClockDateFormat` - Clock control date format. Keep empty to hide the date
+- `ClockTimeFormat` - Clock control time format. Keep empty to hide the time
+- `ClockLongFormat` - Long date and time format for time zones popup header
+- `ClockTimeZones` - Optional clock time zones - dictionary name-time zone ID. Sample provided in json above.
+- `ClockTimeZoneDateFormat` - Date format to be used in time zones popup
+- `ClockTimeZoneTimeFormat` - Time format to be used in time zones popup
 - `FeatureFlags` - Section used to configure (and allow/block) the experimental features or work in progress.
   - `JumpList` - Enable/Disable JumpList functionality.
   - `JumpListSvcVersion` - `JumpListService` version selector. `JumpListService2` (`"JumpListSvcVersion":2`) is used by default. Use `"JumpListSvcVersion":1` to switch to legacy `JumpListService`.
@@ -256,6 +363,9 @@ Besides the runtime configuration described above, it's possible to adjust the a
   - `UseApplicationResolver` - Enable/Disable using the undocumented win32 api to get the AppId
   - `EnableColorsInMenuPopup` - Enable/Disable the menu popup panel showing the theme colors 
   - `KeepMenuPopupOpen` - When set, the menu popup is kept open even when another application is active 
+  - `EnableRunInfoFromWindowsPrefetch` - When set, the Windows Prefetch files will be used to retrieve initial run statistics for search ranking
+  - `EnableStartMenuPins` - When set, the Start pinned applications will be retrieved and presented in menu popup
+  - `EnableContextMenuOnThumbnail` - When set, the right click on the thumbnail will show the system context menu of the window the thumbnail belongs to
 - `AppIds` - AppIds or Application IDs are used for grouping the buttons together, but they are also used to identify the application within the system and use the information from list of installed applications to get some additional data (for example application icon) or to decide how to launch the application (desktop and Store applications are launched different way). Unfortunately, there is no simple and straight way how to obtain the AppId, so some "try and see" logic is used. For some cases it's just easier to define the AppIds for particular application directly in the configuration. `Explorer` should always be there as defined above.
 
 The application uses the standard [.NET Configuration system](https://docs.microsoft.com/en-us/dotnet/core/extensions/configuration), so it's also possible to set the configuration values using the command line parameters or environment values. For example the theme configuration from `appsettings.json` can be overriden using the command line parameter `AppSettings:StartupTheme=Light`. There are two exceptions:
@@ -287,6 +397,7 @@ The language file has following structure:
       "MenuPopupSettings": "Settings",
       "MenuPopupColors": "Colors",
       "MenuPopupApps": "Applications",
+      "MenuPopupPins": "Pinned apps"
       "MenuPopupToggleDesktop": "Toggle desktop",
       "MenuPopupToggleTheme": "Toggle theme",
       "MenuPopupExit": "Exit app",
@@ -312,7 +423,11 @@ The language file has following structure:
       "JumpListCategoryFrequent": "Frequent",
 
       "CustomMostVisited": "Most visited",
-      "CustomRecentlyClosed": "Recently closeed"
+      "CustomRecentlyClosed": "Recently closeed",
+            
+      "AudioIsDefault": "Default device",
+      "AudioSetDefault": "Set as default device",
+      "AudioIsCommDefault": "Default comm device"
     }
   }
 } 
@@ -323,6 +438,7 @@ The language file has following structure:
 - `SearchCategory` keys are for the names for categories in search results
 - `JumplListMenu` keys are labels for close window and close jumplist commands
 - `JumplListCategory` keys are for the names of known (standard) categories in jumplists
+- `Audio` keys are for audio device popup
 - `Custom` keys are used for custom JumpList category names that can be provided by individual applications. To translate these, create custom keys named `Custom` followed by name of the category as provided by application without spaces. The matching is case insensitive. For example `CustomMostVisited` can be used to translate the category `Most visited`.
 
 
@@ -475,11 +591,15 @@ do
 
 As mentioned above, the interface is not public and documented (and it's versioned as well), so it can change with some Windows update. Use the setting `ShowPinnedApps` to switch the functionality off in case of issues.
 
+### Start Pinned Applications ###
+The only documented way of getting the information about applications pinned to Windows Start is through the Power Shell commandlet `Export-StartLayout`. It exports the start layout into XML (Windows 10) or JSON (Windows 11) with structure corresponding to OS version. The XML for Windows 10 is documented and supports folders, JSON for Windows 11 doesn't support folders and I didn't find any documentation.
+As I didn't find any Windows API that will retrieve the list of applications pinned to Start, I checked the exports of the DLL backing the Power Shell module implementing `Export-StartLayout`. I found that it references and uses COM `IStartLayoutCmdlet` and corresponding class `CStartLayoutCmdlet`, so I embedded these into `AppBarSwitcher` to get the same functionality without a need to host the Power Shell. The start menu layout is exported to temporary file using `IStartLayoutCmdlet`, the XML or JSON is then parsed and used as a source of information about pinned applications.
+Retrieval of Start pinned application takes some time, so it's retrieved by backgound data service (after retrieval of installed applications)
+
+Neither the interfaces not the way how I used it is documented, so it can change without any notice and stop working. In case of issues, disabling the feature flag `EnableStartMenuPins` should help.
+
 ## Additional (future) Feature Ideas ##
-  - Optional clock panel on the main application bar. Popup with info about time in other time zones defined in settings - in progress for v2.1
-  - Optional audio controls panel on the main application bar allowing to toggle mute and change volume for speakers and/or mic - in progress for v2.1
   - JumpLists for items in the application list
-  - Windows Start menu pinned applications and groups panel in menu - so far didn't find a way, how to get the items neither for Windows 10 nor for Windows 11
   - Optional auto hide functionality of appbar
 
 

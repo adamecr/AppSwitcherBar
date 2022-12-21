@@ -158,8 +158,8 @@ public interface IAppSettings
     /// <summary>
     /// Flag whether the application will allow user to change the order of the buttons representing the (task bar) windows
     /// </summary>
-    bool AllowAppBarButtonReorder { get; } 
-   
+    bool AllowAppBarButtonReorder { get; }
+
     /// <summary>
     /// Flag whether to show buttons ("pins") for applications pinned to the task bar when they have no window open
     /// </summary>
@@ -194,6 +194,67 @@ public interface IAppSettings
     /// Theme to be used on application startup 
     /// </summary>
     StartupThemeEnum StartupTheme { get; }
+
+    /// <summary>
+    /// Flag whether to show the audio device info and settings in the app bar
+    /// </summary>
+    bool ShowAudioControls { get; }
+
+    /// <summary>
+    /// Width of audio controls popup
+    /// </summary>
+    int AudioControlsPopupWidth { get; }
+
+    /// <summary>
+    /// Flag whether to show the clock in the app bar
+    /// </summary>
+    bool ShowClock { get; }
+
+    /// <summary>
+    /// Width of clock control in the app bar
+    /// </summary>
+    int ClockWidth { get; }
+
+    /// <summary>
+    /// Width of clock popup
+    /// </summary>
+    int ClockPopupWidth { get; }
+
+    /// <summary>
+    /// Refresh interval (in milliseconds) to update clock
+    /// </summary>
+    int RefreshClockIntervalMs { get; }
+
+    /// <summary>
+    /// Clock control date format. Keep empty to hide the date
+    /// </summary>
+    string? ClockDateFormat { get; }
+
+    /// <summary>
+    /// Clock control time format. Keep empty to hide the time
+    /// </summary>
+    string? ClockTimeFormat { get; }
+
+    /// <summary>
+    /// Clock control long date and time format.
+    /// </summary>
+    string? ClockLongFormat { get; }
+
+    /// <summary>
+    /// Time zones collection
+    /// </summary>
+    Dictionary<string, string>? ClockTimeZones { get; }
+
+    /// <summary>
+    /// Clock control date format to be used for time zone
+    /// </summary>
+    string? ClockTimeZoneDateFormat { get; }
+
+    /// <summary>
+    /// Clock control time format to be used for time zone
+    /// </summary>
+    string? ClockTimeZoneTimeFormat { get; }
+
 
     //---------------------------------------------------------------------
 

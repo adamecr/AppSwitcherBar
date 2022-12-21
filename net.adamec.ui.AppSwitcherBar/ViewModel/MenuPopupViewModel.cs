@@ -21,6 +21,8 @@ using net.adamec.ui.AppSwitcherBar.Dto.AppList;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell;
 using Application = System.Windows.Application;
 using Microsoft.Extensions.Logging;
+using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Pins;
 
 namespace net.adamec.ui.AppSwitcherBar.ViewModel
 {
@@ -98,6 +100,11 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         private IBackgroundDataService BackgroundDataService { get; }
 
         /// <summary>
+        /// Pins  service to be used
+        /// </summary>
+        private IPinsService PinsService { get; }
+
+        /// <summary>
         /// Flag whether the app uses the dark theme
         /// </summary>
         private bool IsDarkTheme => Main.IsDarkTheme;
@@ -165,6 +172,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         IsInSettings = false;
                         IsInColors = false;
                         IsInApps = false;
+                        IsInPins = false;
 
                         //init search
                         InitSearch();
@@ -243,6 +251,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         EndSearch();
                         IsInColors = false;
                         IsInApps = false;
+                        IsInPins = false;
                     }
                     OnPropertyChanged();
                 }
@@ -271,6 +280,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         EndSearch();
                         IsInSettings = false;
                         IsInApps = false;
+                        IsInPins = false;
                     }
                     OnPropertyChanged();
                 }
@@ -299,8 +309,75 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         EndSearch();
                         IsInSettings = false;
                         IsInColors = false;
+                        IsInPins = false;
                     }
                     OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Flag whether the pins panel is active 
+        /// </summary>
+        private bool isInPins;
+
+        /// <summary>
+        /// Flag whether the pins panel is active 
+        /// </summary>
+        public bool IsInPins
+        {
+            get => isInPins;
+            set
+            {
+                if (isInPins != value)
+                {
+                    isInPins = value;
+                    if (isInPins)
+                    {
+                        //switch panels
+                        EndSearch();
+                        IsInSettings = false;
+                        IsInColors = false;
+                        IsInApps = false;
+                    }
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Flag whether the Start pins are shown as icons (true) or list (false)  
+        /// </summary>
+        private bool isPinViewIcons=true;
+        /// <summary>
+        /// Flag whether the Start pins are shown as icons (true) or list (false)
+        /// </summary>
+        public bool IsPinViewIcons
+        {
+            get => isPinViewIcons;
+            set
+            {
+                if (isPinViewIcons != value)
+                {
+                    isPinViewIcons = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsPinViewList));
+                }
+            }
+        }
+        /// <summary>
+        /// Flag whether the Start pins are shown as list (true) or icons (false)
+        /// </summary>
+        public bool IsPinViewList
+        {
+            get => !isPinViewIcons;
+            set
+            {
+                if (isPinViewIcons == value)
+                {
+                    isPinViewIcons = !value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsPinViewIcons));
                 }
             }
         }
@@ -330,6 +407,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         IsInSettings = false; //ensure to "hide" settings
                         IsInColors = false; //ensure to "hide" colors
                         IsInApps = false; //ensure to "hide" apps
+                        IsInPins = false; //ensure to "hide" pins
                     }
 
                     OnPropertyChanged();
@@ -341,6 +419,11 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// Flag whether the colors panel is enabled
         /// </summary>
         public bool IsColorsEnabled { get; }
+
+        /// <summary>
+        /// Flag whether the Start pins panel is enabled
+        /// </summary>
+        public bool IsPinsEnabled { get; }
 
         /// <summary>
         /// Information about brushes in Light and Dark themes
@@ -357,6 +440,17 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// Set of application list items
         /// </summary>
         public ObservableCollection<AppListItem> AppList { get; } = new();
+
+
+        /// <summary>
+        /// Information about the applications pinned in the startmenu
+        /// </summary>
+        private PinnedAppInfo[] StartPinnedApplications => BackgroundDataService.StartPinnedApplications;
+
+        /// <summary>
+        /// Set of Start pins list items
+        /// </summary>
+        public ObservableCollection<AppListItem> StartPinList { get; } = new();
 
         /// <summary>
         /// Command sending a special key press related to search
@@ -390,6 +484,11 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public ICommand AppListKeyCommand { get; }
 
         /// <summary>
+        /// Command requesting to show Start pins
+        /// </summary>
+        public ICommand ShowPinsCommand { get; }
+
+        /// <summary>
         /// Command requesting to toggle desktop
         /// </summary>
         public ICommand ToggleDesktopCommand { get; }
@@ -415,10 +514,9 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public ICommand RefreshWindowCollectionCommand { get; }
 
         /// <summary>
-        /// Name of the Feature Flag for enabling the color panel in menu popup
+        /// Command to launch the app shortcut at app list panel
         /// </summary>
-        // ReSharper disable once InconsistentNaming
-        public const string FF_EnableColorsInMenuPopup = "EnableColorsInMenuPopup";
+        public ICommand LaunchAppShortcutCommand { get; }
 
         /// <summary>
         /// Internal CTOR
@@ -428,8 +526,9 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <param name="logger">Logger to be used</param>
         /// <param name="startupService">Startup service to be used</param>
         /// <param name="languageService">Language  service to be used</param>
+        /// <param name="pinsService">Pins service to be used</param>
         /// <param name="backgroundDataService">Background Data service to be used</param>
-        internal MenuPopupViewModel(MainViewModel main, IAppSettings settings, ILogger logger, IStartupService startupService, ILanguageService languageService, IBackgroundDataService backgroundDataService)
+        internal MenuPopupViewModel(MainViewModel main, IAppSettings settings, ILogger logger, IStartupService startupService, ILanguageService languageService, IBackgroundDataService backgroundDataService, IPinsService pinsService)
         {
             this.logger = logger;
 
@@ -438,6 +537,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             StartupService = startupService;
             LanguageService = languageService;
             BackgroundDataService = backgroundDataService;
+            PinsService = pinsService;
 
             ToggleRunOnStartupCommand = new RelayCommand(ToggleRunOnWinStartup);
             SearchSpecialKeyCommand = new RelayCommand(SearchSpecialKey);
@@ -447,12 +547,15 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             ShowSearchCommand = new RelayCommand(ShowSearch);
             ShowColorsCommand = new RelayCommand(ShowColors);
             ShowAppsCommand = new RelayCommand(ShowApps);
+            ShowPinsCommand = new RelayCommand(ShowPins);
             AppListKeyCommand = new RelayCommand(AppListKey);
             HideMenuPopupCommand = new RelayCommand(HideMenuPopup);
             RefreshWindowCollectionCommand = new RelayCommand(Main.RefreshAllWindowsCollection);
+            LaunchAppShortcutCommand = new RelayCommand(LaunchAppShortcut);
 
             runOnWinStartupSet = startupService.HasAppStartupLink();
-            IsColorsEnabled = Settings.FeatureFlag(FF_EnableColorsInMenuPopup, false);
+            IsColorsEnabled = Settings.FeatureFlag(AppSettings.FF_EnableColorsInMenuPopup, false);
+            IsPinsEnabled = Settings.FeatureFlag(AppSettings.FF_EnableStartMenuPins, false);
             LanguageService = languageService;
 
             Edges = new EdgeInfo[] {
@@ -466,6 +569,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 if (args.PropertyName == nameof(BackgroundDataService.BackgroundDataRetrieved) && backgroundDataService.BackgroundDataRetrieved)
                 {
                     BuildAppList();
+                    BuildStartPinsList();
                 }
             };
         }
@@ -479,9 +583,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <param name="startupService">Startup service to be used</param>
         /// <param name="languageService">Language  service to be used</param>
         /// <param name="backgroundDataService">Background Data service to be used</param>
+        /// <param name="pinsService">Pins service to be used</param>
         // ReSharper disable once UnusedMember.Global
-        public MenuPopupViewModel(MainViewModel main, ILogger<MainViewModel> logger, IOptions<AppSettings> options, IStartupService startupService, ILanguageService languageService, IBackgroundDataService backgroundDataService)
-            : this(main, options.Value,logger, startupService, languageService, backgroundDataService)
+        public MenuPopupViewModel(MainViewModel main, ILogger<MainViewModel> logger, IOptions<AppSettings> options, IStartupService startupService, ILanguageService languageService, IBackgroundDataService backgroundDataService, IPinsService pinsService)
+            : this(main, options.Value, logger, startupService, languageService, backgroundDataService, pinsService)
         {
             //used from DI - DI populates the parameters and the internal CTOR is called then
         }
@@ -588,7 +693,9 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             {
                 var windows = Main.ButtonManager
                     .Where(b => b is WndInfo && b.Title.Contains(text, StringComparison.InvariantCultureIgnoreCase))
-                    .Cast<WndInfo>().ToArray();
+                    .Cast<WndInfo>()
+                    .OrderByDescending(w => w.SearchSortKey)
+                    .ToArray();
                 if (windows.Length > 0)
                 {
                     SearchResults.Add(new SearchResultItemHeader(LanguageService.Translate(TranslationKeys.SearchCategoryWindows) ?? "Windows"));
@@ -612,9 +719,26 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             //pinned and installed apps
             if (!isWindowsOnlySearch)
             {
-                var pins = Main.PinnedApplications
-                    .Where(b => b.Title.Contains(text, StringComparison.InvariantCultureIgnoreCase))
+                var taskbarPins =
+                    Main.TaskbarPinnedApplications
+                    .Where(b =>
+                        b.Title.Contains(text, StringComparison.InvariantCultureIgnoreCase) ||
+                        b.ShellProperties.Keywords.Any(k => k.Contains(text, StringComparison.InvariantCultureIgnoreCase)))
                     .ToArray();
+                var taskBarPinAppIds = taskbarPins.Where(p => p.AppId != null).Select(p => p.AppId!).Distinct().ToArray();
+
+                var startPins =
+                    StartPinnedApplications
+                    .Where(s =>
+                        s.Title.Contains(text, StringComparison.InvariantCultureIgnoreCase) &&
+                        !taskBarPinAppIds.Contains(s.AppId));
+
+                var pins =
+                    taskbarPins
+                    .Union(startPins)
+                    .OrderByDescending(b => b.SearchSortKey)
+                    .ToArray();
+
                 if (pins.Length > 0)
                 {
                     if (needsSeparator)
@@ -640,7 +764,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 }
 
 
-                var installs = BackgroundDataService.InstalledApplications.SearchByName(text).ToArray();
+                var installs = BackgroundDataService.InstalledApplications.SearchByName(text).OrderByDescending(i => i.SearchSortKey).ToArray();
                 if (installs.Length > 0)
                 {
                     if (needsSeparator)
@@ -669,7 +793,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             //installed non-apps (documents)
             if (!isWindowsOnlySearch && !isAppsOnlySearch)
             {
-                var docs = BackgroundDataService.InstalledApplications.SearchDocumentsByName(text).ToArray();
+                var docs = BackgroundDataService.InstalledApplications.SearchDocumentsByName(text).OrderByDescending(i => i.SearchSortKey).ToArray();
                 if (docs.Length > 0)
                 {
                     if (needsSeparator)
@@ -909,7 +1033,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                     var item = new AppListInstalledItem(sourceItem, lastFolder != null, a => a.LaunchInstalledApp(e =>
                     {
                         LogCantStartApp(sourceItem.ShellProperties.IsStoreApp ? sourceItem.AppUserModelId ?? "[Null] appID" : sourceItem.Executable ?? "[Null] file", e);
-                    })); 
+                    }));
 
                     lastFolder?.AddItem(item);
                     AppList.Add(item);
@@ -917,6 +1041,13 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             }
         }
 
+        /// <summary>
+        /// Switch the panel to Pins
+        /// </summary>
+        private void ShowPins()
+        {
+            IsInPins = true;
+        }
 
         /// <summary>
         /// Process the key for app list
@@ -947,6 +1078,54 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             }
         }
 
+
+        /// <summary>
+        /// Builds the Start pins list
+        /// </summary>
+        private void BuildStartPinsList()
+        {
+            StartPinList.Clear();
+            if (!IsPinsEnabled) return;
+
+            var startPinList = StartPinnedApplications.ToArray();
+            var installedApplications = BackgroundDataService.InstalledApplications.GetAllItems().ToArray();
+            if (startPinList.Length > 0)
+            {
+
+                var lastFolderName = string.Empty;
+                AppListFolder? lastFolder = null;
+
+                foreach (var pinnedItem in startPinList)
+                {
+                    var sourceItem = installedApplications.FirstOrDefault(i => pinnedItem.AppId == i.AppUserModelId);
+                    if (sourceItem == null) continue;
+
+                    if (pinnedItem.PinnedAppType == PinnedAppInfo.PinnedAppTypeEnum.Package)
+                    {
+                        //update from installed application as it's not available when retrieved
+                        pinnedItem.Title = sourceItem.Name;
+                        pinnedItem.BitmapSource = sourceItem.IconSource;
+                    }
+
+                    if (lastFolderName != pinnedItem.StartFolder)
+                    {
+                        lastFolderName = pinnedItem.StartFolder;
+                        lastFolder = lastFolderName != string.Empty ? new AppListFolder(lastFolderName){IsExpanded = true} : null;
+                        if (lastFolder != null) StartPinList.Add(lastFolder);
+                    }
+                    
+
+                    var item = new AppListInstalledItem(sourceItem, lastFolder != null, a => a.LaunchInstalledApp(e =>
+                    {
+                        LogCantStartApp(sourceItem.ShellProperties.IsStoreApp ? sourceItem.AppUserModelId ?? "[Null] appID" : sourceItem.Executable ?? "[Null] file", e);
+                    }));
+
+                    lastFolder?.AddItem(item);
+                    StartPinList.Add(item);
+                }
+            }
+        }
+
         /// <summary>
         /// Toggle application theme between Light and Dark
         /// </summary>
@@ -958,7 +1137,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             //refresh info about brushes (colors)
             FillThemeResourcesColl();
 
-            //refresh icons from applications
+            //Refresh after the switch
             Main.RefreshAllWindowsCollection(true);
 
 #if DEBUG
@@ -984,6 +1163,46 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         }
 
         /// <summary>
+        /// Launch the app shortcut
+        /// Parameter <paramref name="param"/> must be <see cref="ShortcutType"/> value
+        /// </summary>
+        /// <param name="param"><see cref="Key"/> pressed </param>
+        /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="ShortcutType"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
+        private void LaunchAppShortcut(object? param)
+        {
+            if (param is not ShortcutType shortcutType)
+            {
+                throw new ArgumentException($"Command parameter must be {nameof(ShortcutType)}", nameof(param));
+            }
+
+            switch (shortcutType)
+            {
+                case ShortcutType.Documents:
+                    Shell.Explore(ShellSpecialFolder.PERSONAL);
+                    break;
+                case ShortcutType.Pictures:
+                    Shell.Explore(ShellSpecialFolder.MYPICTURES);
+                    break;
+                case ShortcutType.Downloads:
+                    Shell.Explore("shell:Downloads");
+                    break;
+                case ShortcutType.Run:
+                    Shell.FileRun();
+                    break;
+                case ShortcutType.Console:
+                    Shell.ShellExecute("cmd");
+                    break;
+                case ShortcutType.DeviceAndPrinters:
+                    Shell.ShellExecute("control", "printers");
+                    break;
+                case ShortcutType.Settings:
+                    Shell.ShellExecute("ms-settings:home");
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+        /// <summary>
         /// Occurs when a property value changes
         /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -996,6 +1215,41 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public void OnPropertyChanged([CallerMemberName] string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        /// <summary>
+        /// Type of shortcut in app panel
+        /// </summary>
+        public enum ShortcutType
+        {
+            /// <summary>
+            /// Open Documents folder
+            /// </summary>
+            Documents,
+            /// <summary>
+            /// Open Pictures folder
+            /// </summary>
+            Pictures,
+            /// <summary>
+            /// Open downloads folder
+            /// </summary>
+            Downloads,
+            /// <summary>
+            /// Open Run dialog
+            /// </summary>
+            Run,
+            /// <summary>
+            /// Open command console
+            /// </summary>
+            Console,
+            /// <summary>
+            /// Open Device and Printers
+            /// </summary>
+            DeviceAndPrinters,
+            /// <summary>
+            /// Open Windows settings
+            /// </summary>
+            Settings
         }
     }
 }

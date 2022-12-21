@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Windows.Controls;
+using System.Xml.Linq;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeMethods;
@@ -190,6 +190,33 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
             var appActiveManager = new ApplicationActivationManager();//Class not registered
             var hr=appActiveManager.ActivateApplication(appId, arguments, ActivateOptions.None, out pid);
             return hr.IsSuccess;
+        }
+
+        /// <summary>
+        /// Gets the executable for package.
+        /// The information is retrieved from manifest in <paramref name="packageDir"/>.
+        /// Application ID is extracted from <paramref name="packageName"/> and used as a lookup in manifest
+        /// </summary>
+        /// <param name="packageDir">Package install directory</param>
+        /// <param name="packageName">Name of the package</param>
+        /// <returns>Executable for package or null if not found</returns>
+        public static string? GetPackageExecutable(string packageDir, string packageName)
+        {
+            var manifestFile = Path.Combine(packageDir, "AppxManifest.xml");
+            if (!File.Exists(manifestFile)) return null;
+
+            var parts = packageName.Split('!');
+            if (parts.Length != 2) return null;
+            var appName = parts[1];
+
+            var manifestXml = File.ReadAllText(manifestFile);
+            var doc = XDocument.Parse(manifestXml);
+
+            var executable = doc.Descendants().Where(d => d.Name.LocalName == "Application" && d.Attribute("Id")?.Value == appName).Attributes("Executable").FirstOrDefault()?.Value;
+            if (executable == null) return null;
+
+            var executableFullPath = Path.Combine(packageDir, executable);
+            return !File.Exists(executableFullPath) ? null : executableFullPath;
         }
     }
 }

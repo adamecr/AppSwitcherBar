@@ -11,9 +11,9 @@
 		<RepositoryUrl>https://github.com/adamecr/AppSwitcherBar</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/adamecr/AppSwitcherBar</PackageProjectUrl>
 		<Product>AppSwitcherBar</Product>
-		<Version>2.0.1</Version>
-		<AssemblyVersion>2.0.1</AssemblyVersion>
-		<FileVersion>2.0.1</FileVersion>
+		<Version>2.1.0</Version>
+		<AssemblyVersion>2.1.0</AssemblyVersion>
+		<FileVersion>2.1.0</FileVersion>
 		<ApplicationIcon>AppSwitcherBar.ico</ApplicationIcon>
 		<AssemblyName>AppSwitcherBar</AssemblyName>
 		<Platforms>AnyCPU;x64</Platforms>
@@ -46,6 +46,12 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
 		<PackageReference Include="WPF-UI" Version="2.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="Views\ClockControl.xaml.cs">
+	    <SubType>Code</SubType>
+	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>

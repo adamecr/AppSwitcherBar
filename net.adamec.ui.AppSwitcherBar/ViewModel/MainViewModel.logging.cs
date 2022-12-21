@@ -32,6 +32,8 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         // 2xxx - Startup Service (29xx Errors/Exceptions)
         // 3xxx - AppBarWindow (39xx Errors/Exceptions)
         // 4xxx - BackgroundData Service (49xx Errors/Exceptions)
+        // 5xxx - Audio Service + Audio API (59xx Errors/Exceptions)
+        // 6xxx - Pinned apps Service (69xx Errors/Exceptions)
 
         /// <summary>
         /// Log definition options
@@ -199,7 +201,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 LogOptions);
 
         /// <summary>
-        /// Logs record (Critical) about the wrong parameter of <see cref="ShowThumbnailCommand"/> (null or wrong type)
+        /// Logs record (Critical) about the wrong parameter of command (null or wrong type)
         /// </summary>
         /// <param name="commandParameterTypeName">Name of expected <see cref="Type"/> of the command parameter value</param>
         private void LogWrongCommandParameter(string commandParameterTypeName)

@@ -1,0 +1,95 @@
+﻿<UserControl x:Class="net.adamec.ui.AppSwitcherBar.Views.ClockControl"
+              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+              xmlns:ignore="http://dummy"
+              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+              xmlns:wpfExt="clr-namespace:net.adamec.ui.AppSwitcherBar.WpfExt"
+              xmlns:dto="clr-namespace:net.adamec.ui.AppSwitcherBar.Dto"
+              mc:Ignorable="d ignore" 
+              d:DesignHeight="50" d:DesignWidth="80"
+              x:Name="Control"
+              Background="{ui:ThemeResource ApplicationBackgroundBrush}" Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" Padding="5,3"
+             >
+    <UserControl.DataContext>
+        <Binding Source="{StaticResource ViewModelLocator}" Path="ClockViewModel" />
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <wpfExt:HasStringVisibilityConverter x:Key="HasStringVisibilityConverter"/>
+
+        <Style x:Key="DateTimeText" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"></Setter>
+        </Style>
+    </UserControl.Resources>
+    <Grid VerticalAlignment="Center">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Style="{StaticResource DateTimeText}" Text="{Binding Time}" Visibility="{Binding Time, Converter={StaticResource HasStringVisibilityConverter}}"/>
+        <TextBlock Grid.Row="1" Style="{StaticResource DateTimeText}" Text="{Binding Date}" Visibility="{Binding Date, Converter={StaticResource HasStringVisibilityConverter}}"/>
+        <!-- ReSharper disable once Xaml.MissingGridIndex -->
+        <Popup IsOpen="{Binding IsTimeZonesPopupOpen,  ElementName=Control, Mode=OneWay}"
+               Visibility="{Binding HasTimeZones, Converter={StaticResource BooleanToVisibilityConverter}}"
+               PlacementTarget="{Binding ElementName=Control}"
+               Width="{Binding Settings.ClockPopupWidth}">
+            <Popup.Style>
+                <Style TargetType="{x:Type Popup}">
+                    <Setter Property="AllowsTransparency" Value="True"/>
+                    <Setter Property="HorizontalOffset" Value="0"/>
+                    <Setter Property="VerticalOffset" Value="0"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Control}" Value="Left">
+                            <Setter Property="Placement" Value="Right" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Control}" Value="Right">
+                            <Setter Property="Placement" Value="Left" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Control}" Value="Top">
+                            <Setter Property="Placement" Value="Bottom" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Control}" Value="Bottom">
+                            <Setter Property="Placement" Value="Top" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Popup.Style>
+            <Border BorderThickness="1"
+                    Background="{ui:ThemeResource ApplicationBackgroundBrush}"
+                    BorderBrush="{ui:ThemeResource TextFillColorDisabledBrush}">
+                <Grid VerticalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{Binding DateTimeLong}" 
+                               HorizontalAlignment="Center"
+                               Margin="3,5,3,10"/>
+
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding TimeZones}" Grid.IsSharedSizeScope="True" Margin="10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type dto:ClockTimeZone}" >
+                                <Grid Margin="3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="TzName"/>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="TzDate"/>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="TzTime"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" Margin="5,2" FontSize="14" VerticalAlignment="Bottom"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Date}" Margin="3,2" FontSize="11" VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Time}" Margin="3,2" FontSize="14" VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding Delta}" Margin="5,2" FontSize="11" VerticalAlignment="Bottom"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

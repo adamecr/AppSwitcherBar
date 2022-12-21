@@ -1,4 +1,5 @@
-﻿using System.Windows.Media.Imaging;
+﻿using System;
+using System.Windows.Media.Imaging;
 
 // ReSharper disable CommentTypo
 // ReSharper disable IdentifierTypo
@@ -153,6 +154,11 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         /// Folder in Windows Start menu
         /// </summary>
         public string? TileSuiteDisplayName { get; init; }
+
+        /// <summary>
+        /// Keywords used for search besides the app/file name
+        /// </summary>
+        public string[] Keywords { get; init; }=Array.Empty<string>();
 
         /// <summary>
         /// Get the string representation of the object

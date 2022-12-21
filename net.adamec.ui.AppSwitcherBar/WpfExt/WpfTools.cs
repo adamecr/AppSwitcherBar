@@ -62,7 +62,7 @@ namespace net.adamec.ui.AppSwitcherBar.WpfExt
             {
                 if (item is not Visual && item is not Visual3D)
                 {
-                    return null; //TODO check Run
+                    return null;
                 }
                 var parentObject = VisualTreeHelper.GetParent(item);
                 switch (parentObject)

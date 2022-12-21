@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
+using net.adamec.ui.AppSwitcherBar.Dto.Search;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
 
 // ReSharper disable StringLiteralTypo
@@ -11,7 +12,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
     /// <summary>
     /// Information about installed application
     /// </summary>
-    public class InstalledApplication
+    public class InstalledApplication:ISearchable
     {
         /// <summary>
         /// Name of the installed application
@@ -70,6 +71,34 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
         public string AppListSortKey { get; }
 
         /// <summary>
+        /// Application run statistics
+        /// </summary>
+        public RunStats RunStats { get; } = new();
+
+        /// <summary>
+        /// Search sort key
+        /// </summary>
+        public string SearchSortKey
+        {
+            get
+            {
+                var modificationTime = DateTime.MinValue;
+
+                if (!string.IsNullOrEmpty(Executable) && File.Exists(Executable))
+                {
+                    modificationTime = File.GetLastWriteTime(Executable);
+                }
+                if (ShellProperties.IsStoreApp && !string.IsNullOrEmpty(ShellProperties.PackageInstallPath) && Directory.Exists(ShellProperties.PackageInstallPath))
+                {
+                    modificationTime = Directory.GetLastWriteTime(ShellProperties.PackageInstallPath);
+                }
+
+                return RunStats.BuildStandardSearchSortKey(modificationTime);
+            }
+        }
+
+
+        /// <summary>
         /// CTOR
         /// </summary>
         /// <param name="name"> Name of the installed application</param>
@@ -91,7 +120,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
 
             AppListFolder = StartMenuFolder ?? string.Empty;
 
-            var appListCategoryChar = StartMenuFolder==null? name[..1][0] : AppListFolder[..1][0];
+            var appListCategoryChar = StartMenuFolder == null ? name[..1][0] : AppListFolder[..1][0];
 
             if (char.IsLetter(appListCategoryChar))
             {
@@ -106,7 +135,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
                 AppListCategory = "~";
             }
 
-            
+
             AppListSortKey = $"{AppListCategory}{AppListFolder}{name}";
 
         }
@@ -121,6 +150,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
                 if (ShellProperties.IsStoreApp)
                 {
                     Package.ActivateApplication(AppUserModelId, null, out _);
+                    RunStats.UpdateLaunched();
                 }
                 else if (IsShellTarget)
                 {
@@ -136,6 +166,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
                         UseShellExecute = true
                     };
                     Process.Start(startInfo);
+                    RunStats.UpdateLaunched();
                 }
                 else
                 {
@@ -152,6 +183,7 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
                         UseShellExecute = true
                     };
                     Process.Start(startInfo);
+                    RunStats.UpdateLaunched();
                 }
             }
             catch (Exception exception)

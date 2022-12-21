@@ -250,5 +250,68 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services.Shell
                 shellDispatch.ToggleDesktop();
             }
         }
+
+        /// <summary>
+        /// Displays the Run dialog.
+        /// </summary>
+        internal static void FileRun()
+        {
+            var shell = new CShell();
+            // ReSharper disable once SuspiciousTypeConversion.Global
+            if (shell is IShellDispatch6 shellDispatch)
+            {
+                shellDispatch.FileRun();
+            }
+        }
+
+        /// <summary>
+        /// Displays explorer into <paramref name="specialFolder"/>.
+        /// </summary>
+        internal static void Explore(ShellSpecialFolder specialFolder)
+        {
+            var shell = new CShell();
+            // ReSharper disable once SuspiciousTypeConversion.Global
+            if (shell is IShellDispatch6 shellDispatch)
+            {
+                shellDispatch.Explore(specialFolder);
+            }
+        }
+
+        /// <summary>
+        /// Displays explorer into <paramref name="folder"/>.
+        /// </summary>
+        internal static void Explore(string folder)
+        {
+            var shell = new CShell();
+            // ReSharper disable once SuspiciousTypeConversion.Global
+            if (shell is IShellDispatch6 shellDispatch)
+            {
+                shellDispatch.Explore(folder);
+            }
+        }
+
+        /// <summary>
+        /// Shell execute given file <paramref name="file"/> with optional <paramref name="args"/>
+        /// </summary>
+        internal static void ShellExecute(string file, string? args=null)
+        {
+            var shell = new CShell();
+            // ReSharper disable once SuspiciousTypeConversion.Global
+            if (shell is IShellDispatch6 shellDispatch)
+            {
+                shellDispatch.ShellExecute(file,args);
+            }
+        }/// <summary>
+        /// Open Control Panel <paramref name="module"/>.
+        /// </summary>
+        internal static void ControlPanel(string module)
+        {
+            var shell = new CShell();
+            // ReSharper disable once SuspiciousTypeConversion.Global
+            if (shell is IShellDispatch6 shellDispatch)
+            {
+                shellDispatch.ControlPanelItem(module);
+            }
+        }
     }
 }

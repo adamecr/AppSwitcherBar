@@ -19,7 +19,52 @@
     <appBar:AppBarWindow.DataContext>
         <Binding Source="{StaticResource ViewModelLocator}" Path="MainViewModel" />
     </appBar:AppBarWindow.DataContext>
+    <appBar:AppBarWindow.Resources>
+        <Style x:Key="CloseButtonStyle" TargetType="{x:Type ui:Button}"  >
+            <Setter Property="Width" Value="25"/>
+            <Setter Property="Height" Value="25"/>
+            <Setter Property="IconForeground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ui:Button}" >
+                        <Border
+                                    Width="{TemplateBinding Width}"
+                                    Height="{TemplateBinding Height}"
+                                    MinWidth="{TemplateBinding Width}"
+                                    MinHeight="{TemplateBinding Height}"
+                                    Padding="1"
+                                    HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                    BorderThickness="0"
+                                    Background="{TemplateBinding Background}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <ui:SymbolIcon Grid.Row="0" x:Name="Icon" 
+                                               Symbol="{TemplateBinding Icon}"
+                                               Foreground="{TemplateBinding IconForeground}"
+                                               Margin="0"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="20"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="Red" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="PaleVioletRed" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
+    </appBar:AppBarWindow.Resources>
     <DockPanel >
         <DockPanel.Style>
             <Style TargetType="{x:Type DockPanel}">
@@ -96,7 +141,7 @@
                 <ui:SymbolIcon Symbol="LineHorizontal320"/>
             </ToggleButton>
         </StackPanel>
-      
+
 
         <!-- Menu popup -->
         <Popup IsOpen="{Binding IsInMenuPopup, Mode=OneWay}" d:IsOpen="true"
@@ -129,6 +174,57 @@
                 <views:MenuPopup />
             </Border>
         </Popup>
+
+        <!-- Audio panel -->
+        <StackPanel Orientation="Horizontal" Margin="3" VerticalAlignment="Center" HorizontalAlignment="Right"
+                    Visibility="{Binding Path=Settings.ShowAudioControls, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel.Style>
+                <Style TargetType="{x:Type StackPanel}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                            <Setter Property="DockPanel.Dock" Value="Bottom" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                            <Setter Property="DockPanel.Dock" Value="Bottom" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                            <Setter Property="DockPanel.Dock" Value="Right" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                            <Setter Property="DockPanel.Dock" Value="Right" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+
+            <views:AudioControl DockMode="{Binding Path=DockMode, ElementName=Root, Mode=OneWay}"/>
+        </StackPanel>
+
+        <!-- Clock panel -->
+        <StackPanel Orientation="Horizontal" Margin="3" VerticalAlignment="Center" HorizontalAlignment="Right"
+                    Visibility="{Binding Path=Settings.ShowClock, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel.Style>
+                <Style TargetType="{x:Type StackPanel}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Left">
+                            <Setter Property="DockPanel.Dock" Value="Bottom" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Right">
+                            <Setter Property="DockPanel.Dock" Value="Bottom" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Top">
+                            <Setter Property="DockPanel.Dock" Value="Right" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=DockMode, ElementName=Root}" Value="Bottom">
+                            <Setter Property="DockPanel.Dock" Value="Right" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+
+            <views:ClockControl DockMode="{Binding Path=DockMode, ElementName=Root, Mode=OneWay}" Width="{Binding Settings.ClockWidth}"/>
+        </StackPanel>
+
 
         <!-- Main panel (window/pin buttons) -->
         <WrapPanel Name="MainPanel">
@@ -213,7 +309,7 @@
                                             <Setter Property="Background" Value="{ui:ThemeResource SystemAccentColorPrimaryBrush}" />
                                             <Setter Property="Foreground" Value="{ui:ThemeResource TextOnAccentFillColorSelectedTextBrush}" />
                                         </MultiDataTrigger>
-                                       
+
                                         <!-- active window hover -->
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
@@ -382,8 +478,27 @@
                                     AllowsTransparency="True"
                                     Width="{Binding Path=Settings.AppBarThumbnailWidth ,ElementName=Root}"
                                     Height="{Binding Path=Settings.AppBarThumbnailHeight ,ElementName=Root}"
-                                    PlacementTarget="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type wpfExt:AppButton}}}">
-                                    <Border BorderThickness="1" BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}" Background="{ui:ThemeResource ApplicationBackgroundBrush}" CornerRadius="5" />
+                                    PlacementTarget="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type wpfExt:AppButton}}}"
+                                    ShowWndContextMenu="{Binding DataContext.IsContextMenuOnThumbnailEnabled ,ElementName=Root, FallbackValue=false}">
+                                    <Border BorderThickness="1" BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}" Background="{ui:ThemeResource ApplicationBackgroundBrush}" CornerRadius="5" >
+                                        <StackPanel Width="30" Height="30" VerticalAlignment="Top" HorizontalAlignment="Right">
+
+                                            <Popup 
+                                            HorizontalOffset="0"
+                                            VerticalOffset="0"
+                                            AllowsTransparency="True"
+                                            Width="30"
+                                            Height="30"
+                                            
+                                            Placement="Relative"
+                                            IsOpen="{Binding Path=IsOpen ,RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type wpfExt:ThumbnailPopup}}}"
+                                            PlacementTarget="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type StackPanel}}}">
+                                                <ui:Button Style="{StaticResource CloseButtonStyle}" Icon="DismissSquare20"
+                                                           Command="{Binding DataContext.CloseApplicationWindowCommand,ElementName=Root}" CommandParameter="{Binding Self}" />
+                                            </Popup>
+                                        </StackPanel>
+                                        
+                                    </Border>
                                     <wpfExt:ThumbnailPopup.Style>
                                         <Style TargetType="wpfExt:ThumbnailPopup">
                                             <Style.Triggers>
@@ -414,11 +529,14 @@
                                         </Style>
                                     </wpfExt:ThumbnailPopup.Style>
                                 </wpfExt:ThumbnailPopup>
+
                             </Grid>
                         </wpfExt:AppButton>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </WrapPanel>
+
+
     </DockPanel>
 </appBar:AppBarWindow>

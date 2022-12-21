@@ -7,7 +7,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using net.adamec.ui.AppSwitcherBar.Config;
 using net.adamec.ui.AppSwitcherBar.ViewModel;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Audio;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Pins;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Startup;
 using Wpf.Ui.Mvvm.Contracts;
 using Wpf.Ui.Mvvm.Services;
@@ -46,7 +48,7 @@ namespace net.adamec.ui.AppSwitcherBar
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-          
+           
             host = Host
                 .CreateDefaultBuilder(e.Args)
                 .ConfigureHostConfiguration(config =>
@@ -142,16 +144,27 @@ namespace net.adamec.ui.AppSwitcherBar
             //Register configuration objects
             services.Configure<AppSettings>(configuration.GetSection(nameof(AppSettings)));
             services.Configure<Language>(configuration.GetSection(nameof(Language)));
-
+            
             //Register services
             services.AddSingleton<IThemeService, ThemeService>();
             services.AddSingleton<ILanguageService, LanguageService>();
             services.AddSingleton<IBackgroundDataService, BackgroundDataService>();
+            services.AddSingleton<IPinsService, PinsService>(); 
 
-            if (bool.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:JumpList"], out var hasJumpList) && hasJumpList)
+            if (bool.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.ShowAudioControls)}"], out var showAudioControls) && showAudioControls)
+            {
+                services.AddSingleton<IAudioService, AudioService>();
+            }
+            else
+            {
+                services.AddSingleton<IAudioService, DummyAudioService>();
+            }
+
+
+            if (bool.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:{AppSettings.FF_JumpList}"], out var hasJumpList) && hasJumpList)
             {
                 var jumpListSvcVersion =
-                    int.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:JumpListSvcVersion"], out var parsedVersion)
+                    int.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:{AppSettings.FF_JumpListSvcVersion}"], out var parsedVersion)
                         ? parsedVersion
                         : 2;
 
@@ -173,7 +186,7 @@ namespace net.adamec.ui.AppSwitcherBar
                 services.AddSingleton<IJumpListService, DummyJumpListService>();
             }
 
-            if (bool.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:RunOnWindowsStartup"], out var hasWinStartup) && hasWinStartup)
+            if (bool.TryParse(configuration[$"{nameof(AppSettings)}:{nameof(AppSettings.FeatureFlags)}:{AppSettings.FF_RunOnWindowsStartup}"], out var hasWinStartup) && hasWinStartup)
             {
                 services.AddSingleton<IStartupService, StartupService>();
             }
@@ -183,8 +196,13 @@ namespace net.adamec.ui.AppSwitcherBar
             }
 
             // Register app ViewModels
+            //the view models are in general used "on one place" and (can) have life time same as life time of application,
+            //so I better have them as singletons and not transient
+            //the singletons are also easier to dispose if needed
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<MenuPopupViewModel>();
+            services.AddSingleton<AudioViewModel>();
+            services.AddSingleton<ClockViewModel>();
 
             // Register app Windows
             services.AddSingleton<MainWindow>();

@@ -1,6 +1,7 @@
 ﻿using net.adamec.ui.AppSwitcherBar.Dto;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell.Properties;
+using System;
 
 namespace net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces.Extensions;
 
@@ -78,7 +79,8 @@ internal static class PropertyStoreExtensions
             LinkArguments = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Link_Arguments),
             PackageIconResource = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath),
             RunFlags = propertyStore.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_RunFlags),
-            TileSuiteDisplayName = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SuiteDisplayName)
+            TileSuiteDisplayName = propertyStore.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SuiteDisplayName),
+            Keywords = propertyStore.GetPropertyValue<string[]>(PropertyKey.PKEY_Keywords) ?? Array.Empty<string>()
         };
 
         return retVal;

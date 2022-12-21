@@ -10,6 +10,7 @@ public enum TranslationKeys
     MenuPopupSettings,
     MenuPopupColors,
     MenuPopupApps,
+    MenuPopupPins,
     MenuPopupToggleDesktop,
     MenuPopupToggleTheme,
     MenuPopupExit,
@@ -32,5 +33,9 @@ public enum TranslationKeys
     JumpListCategoryTasks,
     JumpListCategoryPinned,
     JumpListCategoryRecent,
-    JumpListCategoryFrequent
+    JumpListCategoryFrequent,
+
+    AudioIsDefault,
+    AudioSetDefault,
+    AudioIsCommDefault
 }

@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeStructs;
+using net.adamec.ui.AppSwitcherBar.Win32.Services;
 
 // ReSharper disable IdentifierTypo
 // ReSharper disable CommentTypo
@@ -69,6 +70,25 @@ namespace net.adamec.ui.AppSwitcherBar.WpfExt
             typeof(ICommand),
             typeof(ThumbnailPopup),
             new FrameworkPropertyMetadata(null));
+
+
+        /// <summary>
+        /// Flag whether to show system context menu of the source HWND when right clicked to thumbnail
+        /// </summary>
+        public bool ShowWndContextMenu
+        {
+            get => (bool)GetValue(ShowWndContextMenuProperty);
+            set => SetValue(ShowWndContextMenuProperty, value);
+        }
+
+        /// <summary>
+        /// Source window HWND
+        /// </summary>
+        public static readonly DependencyProperty ShowWndContextMenuProperty = DependencyProperty.Register(
+            nameof(ShowWndContextMenu),
+            typeof(bool),
+            typeof(ThumbnailPopup),
+            new FrameworkPropertyMetadata(false));
 
         /// <summary>
         /// Called when the popup is shown (<see cref="Popup.IsOpen"/> changes from false to true)
@@ -147,6 +167,24 @@ namespace net.adamec.ui.AppSwitcherBar.WpfExt
                 this.WpfDimensionToScreen(popupContentRectWithPadding.Right),
                 this.WpfDimensionToScreen(popupContentRectWithPadding.Bottom));
             return popupRect;
+        }
+
+        /// <summary>
+        /// Shows the system context menu of the source window on the right click to thumbnail
+        /// Must be enabled using <see cref="ShowWndContextMenuProperty"/>
+        /// </summary>
+        /// <param name="e">Mouse button event argument</param>
+        protected override void OnPreviewMouseRightButtonUp(MouseButtonEventArgs e)
+        {
+            base.OnPreviewMouseRightButtonUp(e);
+
+            if (ShowWndContextMenu && SourceHwnd!=IntPtr.Zero)
+            {
+                var p = e.GetPosition(this);
+                var s = PointToScreen(p);
+                WndAndApp.ShowWindowContextMenu(SourceHwnd, GetPopupHwnd(), s.X, s.Y);
+                e.Handled = true;
+            }
         }
     }
 }

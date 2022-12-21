@@ -142,6 +142,20 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeMethods
         [DllImport(DLL_NAME)]
         internal static extern int SendMessageA(IntPtr hWnd, uint wMsg, uint wParam, int lParam);
 
+        /// <summary>
+        /// Sends the specified message to a window or windows.
+        /// The function calls the window procedure for the specified window and, if the specified window belongs to a different thread, does not return until the window procedure has processed the message or the specified time-out period has elapsed. If the window receiving the message belongs to the same queue as the current thread, the window procedure is called directly—the time-out value is ignored.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window whose window procedure will receive the message. If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all top-level windows in the system, including disabled or invisible unowned windows, overlapped windows, and pop-up windows; but the message is not sent to child windows.</param>
+        /// <param name="wMsg">The message to be sent.</param>
+        /// <param name="wParam">Additional message-specific information.</param>
+        /// <param name="lParam">Additional message-specific information.</param>
+        /// <param name="flags">The behavior of this function. This parameter can be one or more of the SMTO_XXXX values</param>
+        /// <param name="timeout">The duration of the time-out period, in milliseconds. If the message is a broadcast message, each window can use the full time-out period.</param>
+        /// <param name="result">The return value specifies the result of the message processing; it depends on the message sent.</param>
+        /// <returns>If the function succeeds, the return value is nonzero. </returns>
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern int SendMessageTimeout(IntPtr hWnd, uint wMsg, uint wParam, int lParam, uint flags, uint timeout, out int result);
 
         /// <summary>
         /// Places (posts) a message in the message queue associated with the thread that created the specified window and returns without waiting for the thread to process the message.
@@ -330,7 +344,32 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeMethods
         /// If the function fails, the return value is NULL. </returns>
         [DllImport(DLL_NAME, ExactSpelling = true, CharSet = CharSet.Auto)]
         internal static extern IntPtr GetParent(IntPtr hWnd);
+
+        /// <summary>
+        /// Enables the application to access the window menu (also known as the system menu or the control menu) for copying and modifying.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window that will own a copy of the window menu.</param>
+        /// <param name="bRevert">The action to be taken. If this parameter is FALSE, GetSystemMenu returns a handle to the copy of the window menu currently in use. 
+        /// The copy is initially identical to the window menu, but it can be modified. 
+        /// If this parameter is TRUE, GetSystemMenu resets the window menu back to the default state. The previous window menu, if any, is destroyed.</param>
+        /// <returns>If the bRevert parameter is FALSE, the return value is a handle to a copy of the window menu. If the bRevert parameter is TRUE, the return value is NULL.</returns>
+        [DllImport(DLL_NAME)]
+        internal static extern IntPtr GetSystemMenu(IntPtr hWnd, bool bRevert);
+
+        /// <summary>
+        /// Displays a shortcut menu at the specified location and tracks the selection of items on the shortcut menu. The shortcut menu can appear anywhere on the screen.
+        /// </summary>
+        /// <param name="hmenu">A handle to the shortcut menu to be displayed. </param>
+        /// <param name="fuFlags">Specifies function options.</param>
+        /// <param name="x">The horizontal location of the shortcut menu, in screen coordinates.</param>
+        /// <param name="y">The vertical location of the shortcut menu, in screen coordinates.</param>
+        /// <param name="hwnd">A handle to the window that owns the shortcut menu. This window receives all messages from the menu.</param>
+        /// <param name="lptpm">A pointer to a TPMPARAMS structure that specifies an area of the screen the menu should not overlap. This parameter can be NULL.</param>
+        /// <returns></returns>
+        [DllImport(DLL_NAME, SetLastError =true)]
+        internal static extern int TrackPopupMenuEx(IntPtr hmenu, uint fuFlags, int x, int y, IntPtr hwnd, IntPtr lptpm);
     }
+
 
 
 }

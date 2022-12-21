@@ -45,6 +45,10 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         /// The WM_CLOSE message is sent as a signal that a window or an application should terminate.
         /// </summary>
         internal const int WM_CLOSE = 0x0010;
+        /// <summary>
+        /// The WM_CONTEXTMENU message ntifies a window that the user desires a context menu to appear. .
+        /// </summary>
+        internal const int WM_CONTEXTMENU = 0x007B;
 
         /// <summary>
         /// The window is initially visible. This style can be turned on and off by using the ShowWindow or SetWindowPos function.
@@ -195,6 +199,9 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         internal const string CLSID_ApplicationResolver = "660B90C8-73A9-4B58-8CAE-355B7F55341B";
         internal const string CLSID_AutomaticDestinationList = "f0ae1542-f497-484b-a175-a20db09144ba";
         internal const string CLSID_Shell = "13709620-C279-11CE-A49E-444553540000";
+        internal const string CLSID_CMMDeviceEnumerator = "BCDE0395-E52F-467C-8E3D-C4579291692E";
+        internal const string CLSID_PolicyConfigClient = "870AF99C-171D-4F9E-AF0D-E63DF40C2BC9";
+        internal const string CLSID_StartLayoutCmdlet = "75AB852C-0441-46D4-A205-EF0A33F98255";
 
         //interface IDs
         internal const string IID_IPropertyStore = "886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99";
@@ -227,5 +234,23 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeConstants
         internal const string IID_IObjectArray = "92CA9DCD-5622-4BBA-A805-5E9F541BD8C9";
         internal const string IID_IAutomaticDestinationList2 = "E9C5EF8D-FD41-4F72-BA87-EB03BAD5817C";
         internal const string IID_IShellDispatch6 = "286E6F1B-7113-4355-9562-96B7E9D64C54";
+        internal const string IID_IStartLayoutCmdlet = "0BAC4102-61E9-48A5-93DD-D295ABA65369";
+
+        internal const string IID_IAudioEndpointVolume = "5CDF2C82-841E-4546-9722-0CF74078229A"; 
+        internal const string IID_IAudioEndpointVolumeCallback = "657804FA-D6AD-4496-8A60-352752AF4F89";
+        internal const string IID_IMMNotificationClient = "7991EEC9-7E89-4D85-8390-6C703CEC60C0";
+        internal const string IID_IMMDeviceCollection = "0BD7A1BE-7A1A-44DB-8397-CC5392387B5E";
+        internal const string IID_IMMDevice = "D666063F-1587-4E43-81F1-B948E807363F"; 
+        internal const string IID_IMMDeviceEnumerator = "A95664D2-9614-4F35-A746-DE8DB63617E6";
+        internal const string IID_IPolicyConfig = "F8679F50-850A-41CF-9C72-430F290290C8"; 
+        internal const string IID_IAudioSessionManager = "BFA971F1-4D5E-40BB-935E-967039BFBEE4";
+        internal const string IID_IAudioSessionManager2 = "77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F";
+        internal const string IID_IAudioSessionNotification = "641DD20B-4D41-49CC-ABA3-174B9477BB08";
+        internal const string IID_IAudioVolumeDuckNotification = "C3B284D4-6D39-4359-B3CF-B56DDB3BB39C"; 
+        internal const string IID_ISimpleAudioVolume = "87CE5498-68D6-44E5-9215-6DA47EF883D8"; 
+        internal const string IID_IAudioSessionEnumerator = "E2F5BB11-0570-40CA-ACDD-3AA01277DEE8";
+        internal const string IID_IAudioSessionControl = "F4B1A599-7266-4319-A8CA-E70ACB11E8CD";
+        internal const string IID_IAudioSessionControl2 = "BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D";
+        internal const string IID_IAudioSessionEvents = "24918ACC-64B3-37C1-8CA9-74A66E9957A8";
     }
 }

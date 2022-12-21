@@ -6,6 +6,7 @@
       "MenuPopupSettings": "Nastavení",
       "MenuPopupColors": "Barvy",
       "MenuPopupApps": "Aplikace",
+      "MenuPopupPins": "Připnuté",
       "MenuPopupToggleDesktop": "Přepnout z/na plochu",
       "MenuPopupToggleTheme": "Přepnout schéma barev",
       "MenuPopupExit": "Ukončit aplikaci",
@@ -31,7 +32,11 @@
       "JumpListCategoryFrequent": "Časté položky",
 
       "CustomMostVisited": "Často navštěvované",
-      "CustomRecentlyClosed": "Nedávno zavřené"
+      "CustomRecentlyClosed": "Nedávno zavřené",
+
+      "AudioIsDefault": "Výchozí zařízení",
+      "AudioSetDefault": "Nastavit jako výchozí",
+      "AudioIsCommDefault": "Pro komunikaci"
     }
   }
 }     

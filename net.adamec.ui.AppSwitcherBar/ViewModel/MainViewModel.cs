@@ -17,6 +17,7 @@ using net.adamec.ui.AppSwitcherBar.Dto;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces.Extensions;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.JumpLists;
+using net.adamec.ui.AppSwitcherBar.Win32.Services.Pins;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell;
 using net.adamec.ui.AppSwitcherBar.Win32.Services.Shell.Properties;
 using net.adamec.ui.AppSwitcherBar.WpfExt;
@@ -69,12 +70,12 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <summary>
         /// Information about the applications installed in system
         /// </summary>
-        private InstalledApplications InstalledApplications => backgroundDataService.InstalledApplications; //{ get; } = new();
+        private InstalledApplications InstalledApplications => backgroundDataService.InstalledApplications;
 
         /// <summary>
         /// Information about the applications pinned in the taskbar
         /// </summary>
-        internal PinnedAppInfo[] PinnedApplications { get; private set; } = Array.Empty<PinnedAppInfo>();
+        internal PinnedAppInfo[] TaskbarPinnedApplications { get; set; } = Array.Empty<PinnedAppInfo>();
 
         /// <summary>
         /// Information about the known folder paths and GUIDs
@@ -92,6 +93,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// </summary>
         public IAppSettings Settings { get; }
 
+        /// <summary>
+        /// Flag whether the colors panel is enabled
+        /// </summary>
+        public bool IsContextMenuOnThumbnailEnabled { get; }
 
         /// <summary>
         /// Flag whether the app uses the dark theme 
@@ -113,7 +118,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 }
             }
         }
-        
+
         /// <summary>
         /// Array of the information about all monitors (displays)
         /// </summary>
@@ -155,6 +160,11 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         public ICommand LaunchPinnedAppCommand { get; }
 
         /// <summary>
+        /// Command requesting to close the application window
+        /// </summary>
+        public ICommand CloseApplicationWindowCommand { get; }
+
+        /// <summary>
         /// Flag whether the menu popup is active  
         /// </summary>
         private bool isInMenuPopup;
@@ -185,28 +195,14 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         private readonly ILanguageService languageService;
 
         /// <summary>
+        /// Pins  service to be used
+        /// </summary>
+        private readonly IPinsService pinsService;
+
+        /// <summary>
         /// Background data service to be used
         /// </summary>
         private readonly IBackgroundDataService backgroundDataService;
-
-
-        /// <summary>
-        /// Name of the Feature Flag for windows anonymization
-        /// </summary>
-        // ReSharper disable once InconsistentNaming
-        private const string FF_AnonymizeWindows = "AnonymizeWindows";
-
-        /// <summary>
-        /// Name of the Feature Flag for using the undocumented application resolver to get the app it
-        /// </summary>
-        // ReSharper disable once InconsistentNaming
-        public const string FF_UseApplicationResolver = "UseApplicationResolver";
-
-        /// <summary>
-        /// Name of the Feature Flag for keeping the menu popup open even when another app is active
-        /// </summary>
-        // ReSharper disable once InconsistentNaming
-        private const string FF_KeepMenuPopupOpen = "KeepMenuPopupOpen";
 
         /// <summary>
         /// Map used for simple anonymization
@@ -224,12 +220,14 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <param name="jumpListService">JumpList service to be used</param>
         /// <param name="languageService">Language service to be used</param>
         /// <param name="backgroundDataService">Background Data service to be used</param>
-        internal MainViewModel(IAppSettings settings, ILogger logger, IJumpListService jumpListService, ILanguageService languageService, IBackgroundDataService backgroundDataService)
+        /// <param name="pinsService">Pins service to be used</param>
+        internal MainViewModel(IAppSettings settings, ILogger logger, IJumpListService jumpListService, ILanguageService languageService, IBackgroundDataService backgroundDataService, IPinsService pinsService)
         {
             this.logger = logger;
             this.jumpListService = jumpListService;
             this.languageService = languageService;
             this.backgroundDataService = backgroundDataService;
+            this.pinsService = pinsService;
 
             Settings = settings;
             AllMonitors = Monitor.GetAllMonitors();
@@ -241,20 +239,22 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             HideThumbnailCommand = new RelayCommand(HideThumbnail);
             BuildContextMenuCommand = new RelayCommand(BuildContextMenu);
             LaunchPinnedAppCommand = new RelayCommand(LaunchPinnedApp);
+            CloseApplicationWindowCommand = new RelayCommand(CloseApplicationWindow);
 
             knownAppIds = settings.GetKnowAppIds();
 
-            if (settings.FeatureFlag(FF_AnonymizeWindows, false))
+            if (settings.FeatureFlag(AppSettings.FF_AnonymizeWindows, false))
             {
                 InitAnonymizeMap();
             }
+            IsContextMenuOnThumbnailEnabled = Settings.FeatureFlag(AppSettings.FF_EnableContextMenuOnThumbnail, false);
 
             timer = new DispatcherTimer(DispatcherPriority.Render)
             {
                 Interval = TimeSpan.FromMilliseconds(Settings.RefreshWindowInfosIntervalMs)
             };
             timer.Tick += (_, _) => { if (!ButtonManager.IsBusy) RefreshAllWindowsCollection(false); };
-           
+
             this.languageService = languageService;
         }
 
@@ -267,9 +267,10 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
         /// <param name="languageService">Language service to be used</param>
         /// <param name="jumpListService">JumpList service to be used</param>
         /// <param name="backgroundDataService">Background Data service to be used</param>
+        /// <param name="pinsService">Pins service to be used</param>
         // ReSharper disable once UnusedMember.Global
-        public MainViewModel(IOptions<AppSettings> options, ILogger<MainViewModel> logger, IJumpListService jumpListService, ILanguageService languageService, IBackgroundDataService backgroundDataService)
-            : this(options.Value, logger, jumpListService,languageService,backgroundDataService)
+        public MainViewModel(IOptions<AppSettings> options, ILogger<MainViewModel> logger, IJumpListService jumpListService, ILanguageService languageService, IBackgroundDataService backgroundDataService, IPinsService pinsService)
+            : this(options.Value, logger, jumpListService, languageService, backgroundDataService, pinsService)
         {
             //used from DI - DI populates the parameters and the internal CTOR is called then
         }
@@ -385,12 +386,13 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             {
                 //get known folders
                 knownFolders = Shell.GetKnownFolders();
-                //get information about pinned applications
-                PinnedApplications = jumpListService.GetPinnedApplications(knownFolders);
 
-                ButtonManager.BeginHardRefresh(PinnedApplications);
+                //reload taskbar pinned applications
+                TaskbarPinnedApplications = pinsService.RefreshTaskbarPins();
 
-                //Refresh also init data
+                ButtonManager.BeginHardRefresh(TaskbarPinnedApplications);
+
+                //Refresh also background data (installed apps, Start pins)
                 backgroundDataService.Refresh();
             }
             else
@@ -405,7 +407,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             {
                 lastForegroundWindow = foregroundWindow; //"filter out" the main window as being the foreground one to proper handle the toggle
 
-                if (IsInMenuPopup && !Settings.FeatureFlag(FF_KeepMenuPopupOpen, false)) IsInMenuPopup = false; //cancel popup/search when other app get's focus 
+                if (IsInMenuPopup && !Settings.FeatureFlag(AppSettings.FF_KeepMenuPopupOpen, false)) IsInMenuPopup = false; //cancel popup/search when other app get's focus 
             }
 
             //Enum windows
@@ -415,7 +417,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                 (hwnd, wnd, caption, threadId, processId, ptrProcess) =>
                 {
                     //caption anonymization
-                    if (Settings.FeatureFlag<bool>(FF_AnonymizeWindows))
+                    if (Settings.FeatureFlag<bool>(AppSettings.FF_AnonymizeWindows))
                     {
                         var appName =
                             InstalledApplications.GetInstalledApplicationFromAppId(wnd?.AppId ?? string.Empty)?.Name ??
@@ -427,11 +429,6 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         }
                     }
 
-                    if (caption.ToLower().Contains("task ma"))
-                    {
-
-                    }
-
                     //Check whether it's a "new" application window or a one already existing in the ButtonManager
                     if (wnd == null)
                     {
@@ -441,14 +438,28 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         wnd = new WndInfo(hwnd, caption, threadId, processId, executable);
 
                         //Try to get AppUserModelId using the win32 app resolver, no need to wait for background data
-                        if (Settings.FeatureFlag<bool>(FF_UseApplicationResolver))
-                            wnd.AppId = WndAndApp.GetWindowApplicationUserModelId(hwnd);
+                        if (Settings.FeatureFlag<bool>(AppSettings.FF_UseApplicationResolver))
+                        {
+                            var appId = WndAndApp.GetWindowApplicationUserModelId(hwnd);
+                            wnd.AppId = appId;
+                            if (appId != null)
+                            {
+                                wnd.InstalledApplication = InstalledApplications.GetInstalledApplicationFromAppId(appId);
+                                wnd.PinnedApplication = TaskbarPinnedApplications.FirstOrDefault(p => p.AppId == appId);
+                            }
+                        }
                     }
                     else
                     {
                         //existing (known) window
                         wnd.MarkToKeep(); //reset the "remove from collection" flag
                         wnd.Title = caption; //update the title
+
+                        if (wnd.InstalledApplication == null && wnd.AppId != null)
+                        {
+                            //try to update reference to installed app
+                            wnd.InstalledApplication = InstalledApplications.GetInstalledApplicationFromAppId(wnd.AppId);
+                        }
                     }
 
                     wnd.IsForeground = hwnd == lastForegroundWindow; //check whether the window is foreground window (will be highlighted in UI)
@@ -459,7 +470,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         string? appUserModelId = null;
 
                         //Try to get AppUserModelId using the win32 app resolver
-                        if (Settings.FeatureFlag<bool>(FF_UseApplicationResolver))
+                        if (Settings.FeatureFlag<bool>(AppSettings.FF_UseApplicationResolver))
                         {
                             appUserModelId = WndAndApp.GetWindowApplicationUserModelId(hwnd);
                         }
@@ -498,6 +509,12 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         {
                             //try to get from installed app (identified by executable) or use executable as fallback
                             appUserModelId = InstalledApplications.GetAppIdFromExecutable(wnd.Executable, out var _);
+                        }
+
+                        if (appUserModelId != null)
+                        {
+                            wnd.InstalledApplication = InstalledApplications.GetInstalledApplicationFromAppId(appUserModelId);
+                            wnd.PinnedApplication = TaskbarPinnedApplications.FirstOrDefault(p => p.AppId == appUserModelId);
                         }
 
                         wnd.AppId = appUserModelId;
@@ -638,6 +655,24 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
             thumbnailHandle = IntPtr.Zero;
         }
 
+
+        /// <summary>
+        /// Close the application window 
+        /// Parameter <paramref name="param"/> must be <see cref="WndInfo"/> object
+        /// </summary>
+        /// <param name="param"><see cref="WndInfo"/> object </param>
+        /// <exception cref="ArgumentException">When the <paramref name="param"/> is not <see cref="WndInfo"/> object or is null, <see cref="ArgumentException"/> is thrown</exception>
+        private void CloseApplicationWindow(object? param)
+        {
+            if (param is not WndInfo wndInfo)
+            {
+                LogWrongCommandParameter(nameof(WndInfo));
+                throw new ArgumentException($"Command parameter must be {nameof(WndInfo)}", nameof(param));
+            }
+
+            WndAndApp.CloseWindow(wndInfo!.Hwnd);
+        }
+
         /// <summary>
         /// Launches the pinned application
         /// Parameter <paramref name="param"/> must be <see cref="PinnedAppInfo"/> object
@@ -743,7 +778,7 @@ namespace net.adamec.ui.AppSwitcherBar.ViewModel
                         };
 
                         //caption anonymization
-                        if (Settings.FeatureFlag<bool>(FF_AnonymizeWindows) && linkInfo.Category != localizedTasks)
+                        if (Settings.FeatureFlag<bool>(AppSettings.FF_AnonymizeWindows) && linkInfo.Category != localizedTasks)
                         {
                             menuItem.Header = Anonymize(linkInfo.Name, linkInfo.GetHashCode());
                         }

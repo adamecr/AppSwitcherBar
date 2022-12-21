@@ -41,10 +41,26 @@ namespace net.adamec.ui.AppSwitcherBar.Dto
                 if (isForeground != value)
                 {
                     isForeground = value;
+                    if (isForeground)
+                    {
+                        RunStats.UpdateForeground();
+                        InstalledApplication?.RunStats.UpdateForeground();
+                        PinnedApplication?.RunStats.UpdateForeground();
+                    }
                     OnPropertyChanged();
                 }
             }
         }
+
+        /// <summary>
+        /// Reference to installed application if any
+        /// </summary>
+        public InstalledApplication? InstalledApplication { get; set; }
+
+        /// <summary>
+        /// Reference to pinned application if any
+        /// </summary>
+        public PinnedAppInfo? PinnedApplication { get; set; }
 
         /// <summary>
         /// Change status used when (re)evaluating the windows

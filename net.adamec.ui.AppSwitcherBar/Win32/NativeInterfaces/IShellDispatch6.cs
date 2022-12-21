@@ -166,7 +166,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.NativeInterfaces
 
         /// <summary>Performs a specified operation on a specified file.</summary>
         [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(0x60030001)]
-        void ShellExecute([In, MarshalAs(UnmanagedType.BStr)] string sFile, [In, Optional, MarshalAs(UnmanagedType.Struct)] object vArguments, [In, Optional, MarshalAs(UnmanagedType.Struct)] object vDirectory, [In, Optional, MarshalAs(UnmanagedType.Struct)] object vOperation, [In, Optional, MarshalAs(UnmanagedType.Struct)] object vShow);
+        void ShellExecute([In, MarshalAs(UnmanagedType.BStr)] string sFile, [In, Optional, MarshalAs(UnmanagedType.Struct)] object? vArguments, [In, Optional, MarshalAs(UnmanagedType.Struct)] object vDirectory, [In, Optional, MarshalAs(UnmanagedType.Struct)] object vOperation, [In, Optional, MarshalAs(UnmanagedType.Struct)] object vShow);
 
         /// <summary>Displays the <c>Find Printer</c> dialog box.</summary>
         [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(0x60030002)]

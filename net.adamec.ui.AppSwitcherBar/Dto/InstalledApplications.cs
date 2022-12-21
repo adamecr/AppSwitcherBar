@@ -129,8 +129,9 @@ public class InstalledApplications
             Array.Empty<InstalledApplication>() :
             allApps
                 .Where(a =>
-                    a.Name.Contains(text, StringComparison.InvariantCultureIgnoreCase) &&
-                    a.IsApplication)
+                    a.IsApplication &&
+                    (a.Name.Contains(text, StringComparison.InvariantCultureIgnoreCase) ||
+                     a.ShellProperties.Keywords.Any(k => k.Contains(text, StringComparison.InvariantCultureIgnoreCase))))
                 .ToArray();
     }
 
@@ -145,8 +146,8 @@ public class InstalledApplications
             Array.Empty<InstalledApplication>() :
             allDocuments
                 .Where(a =>
-                    a.Name.Contains(text, StringComparison.InvariantCultureIgnoreCase) &&
-                    ! a.IsApplication)
+                    !a.IsApplication &&
+                    (a.Name.Contains(text, StringComparison.InvariantCultureIgnoreCase) || a.ShellProperties.Keywords.Any(k => k.Contains(text, StringComparison.InvariantCultureIgnoreCase))))
                 .ToArray();
     }
 

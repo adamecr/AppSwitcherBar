@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using System.Xml.Linq;
 using net.adamec.ui.AppSwitcherBar.Dto;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeClasses;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
@@ -240,7 +241,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
                 // ReSharper disable once SuspiciousTypeConversion.Global
                 appResolver = (IApplicationResolver)new CApplicationResolver();
                 var hr = appResolver.GetAppIDForWindow(hwnd, out var appId, out _, out _, out _);
-                return hr.IsSuccess && !string.IsNullOrEmpty(appId)? appId : null;
+                return hr.IsSuccess && !string.IsNullOrEmpty(appId) ? appId : null;
             }
             catch (Exception)
             {
@@ -250,7 +251,7 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
             {
                 if (appResolver != null && Marshal.IsComObject(appResolver))
                 {
-                    Marshal.ReleaseComObject(appResolver); 
+                    Marshal.ReleaseComObject(appResolver);
                 }
             }
         }
@@ -294,10 +295,11 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
             //Try to retrieve the window icon
             IntPtr hiconPtr;
 
-            // Use the WM_GETICON message first
-            var hicon = User32.SendMessageA(hwnd, WM_GETICON, 2, 0);
+            // Use the WM_GETICON message first; timeout is quite long - it's just a fail safe
+            var r = User32.SendMessageTimeout(hwnd, WM_GETICON, 2, 0, 0, 250, out var hicon);
 
-            if (hicon == 0)
+
+            if (r == 0 || hicon == 0)
             {
                 //When the window doesn't provide icon via WM_GETICON, try to get it from native window class
                 hiconPtr = User32.GetClassLongPtr(hwnd, GCLP_HICONSM);
@@ -397,6 +399,27 @@ namespace net.adamec.ui.AppSwitcherBar.Win32.Services
                 HWND_BOTTOM,
                 0, 0, 0, 0,
                 SetWindowPosFlags.IgnoreMove | SetWindowPosFlags.IgnoreResize | SetWindowPosFlags.DoNotActivate);
+        }
+
+
+        /// <summary>
+        /// Shows the system context menu of <paramref name="hwnd"/>
+        /// </summary>
+        /// <param name="hwnd">HWND of window which context menu is to be shown</param>
+        /// <param name="ownHwnd">HWND of window that will show the context menu</param>
+        /// <param name="x">X screen coordinate</param>
+        /// <param name="y">Y screen coordinate</param>
+        public static void ShowWindowContextMenu(IntPtr hwnd, IntPtr ownHwnd, double x, double y)
+        {
+            var hMenu = User32.GetSystemMenu(hwnd, false);
+            if (hMenu != IntPtr.Zero)
+            {
+                //open menu a get the command (action)
+                var command = User32.TrackPopupMenuEx(hMenu, (uint)0x0100L, (int)x, (int)y, ownHwnd, IntPtr.Zero); //TPM.LEFTBUTTON 0x0000L | TPM.RETURNCMD 0x0100L
+
+                //"forward" the command to window
+                if (command != 0) User32.PostMessage(hwnd, WM_SYSCOMMAND, new IntPtr(command), IntPtr.Zero);
+            }
         }
     }
 }

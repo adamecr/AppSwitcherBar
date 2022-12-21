@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="net.adamec.ui.AppSwitcherBar.Views.MenuPopup"
+﻿<UserControl
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -10,13 +10,115 @@
              xmlns:search="clr-namespace:net.adamec.ui.AppSwitcherBar.Dto.Search"
              xmlns:dto="clr-namespace:net.adamec.ui.AppSwitcherBar.Dto"
              xmlns:appList="clr-namespace:net.adamec.ui.AppSwitcherBar.Dto.AppList"
+             xmlns:viewModel="clr-namespace:net.adamec.ui.AppSwitcherBar.ViewModel"
+             x:Class="net.adamec.ui.AppSwitcherBar.Views.MenuPopup"
              mc:Ignorable="d ignore" 
              d:DesignHeight="450" d:DesignWidth="400"
              Background="{ui:ThemeResource ApplicationBackgroundBrush}" Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}">
+    <UserControl.Resources>
+        <Style x:Key="AppShortcutButtonStyle" TargetType="{x:Type ui:Button}"  >
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="IconForeground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Command" Value="{Binding LaunchAppShortcutCommand}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ui:Button}" >
+                        <Border
+                                    Width="{TemplateBinding Width}"
+                                    Height="{TemplateBinding Height}"
+                                    MinWidth="{TemplateBinding Width}"
+                                    MinHeight="{TemplateBinding Height}"
+                                    Padding="2"
+                                    HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                    BorderThickness="0"
+                                    Background="{TemplateBinding Background}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <ui:SymbolIcon Grid.Row="0" x:Name="Icon" 
+                                               Symbol="{TemplateBinding Icon}"
+                                               Foreground="{TemplateBinding IconForeground}"
+                                               Margin="0"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="20"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDisabledBrush}" />
+                                <Setter TargetName="Icon" Property="Foreground" Value="{ui:ThemeResource TextFillColorDisabledBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorTertiaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ToggleViewButtonStyle" TargetType="{x:Type ToggleButton}"  >
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ToggleButton}" >
+                        <Border
+                                    Width="{TemplateBinding Width}"
+                                    Height="{TemplateBinding Height}"
+                                    MinWidth="{TemplateBinding Width}"
+                                    MinHeight="{TemplateBinding Height}"
+                                    Padding="2"
+                                    HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                    BorderThickness="0"
+                                    Background="{TemplateBinding Background}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <ui:SymbolIcon Grid.Row="0" x:Name="Icon" 
+                                               Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                               Margin="0"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="20"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDisabledBrush}" />
+                                <Setter TargetName="Icon" Property="Foreground" Value="{ui:ThemeResource TextFillColorDisabledBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorTertiaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Icon" Property="Symbol" Value="AppsList20" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="Icon" Property="Symbol" Value="MatchAppLayout24" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <UserControl.DataContext>
         <Binding Source="{StaticResource ViewModelLocator}" Path="MenuPopupViewModel" />
     </UserControl.DataContext>
-
     <Grid>
         <Border BorderThickness="1"
                 BorderBrush="{ui:ThemeResource TextFillColorDisabledBrush}" 
@@ -32,41 +134,6 @@
 
                 <!--- nav bar -->
                 <Grid Grid.Column="0" ignore:Width="40" x:Name="NavGrid">
-                    <Grid.RowDefinitions>
-                        <!-- hamburger -->
-                        <RowDefinition Height="Auto" />
-                        <!-- hide popup -->
-                        <RowDefinition Height="Auto" />
-                        <!-- spacer -->
-                        <RowDefinition Height="*" MinHeight="80" />
-                        <!-- toggle desktop -->
-                        <RowDefinition Height="Auto" />
-                        <!-- search -->
-                        <RowDefinition Height="Auto" />
-                        <!-- applications/document ("Start menu like") -->
-                        <RowDefinition Height="Auto" />
-                        <!-- settings -->
-                        <RowDefinition Height="Auto" />
-                        <!-- theme colors -->
-                        <RowDefinition Height="Auto" />
-                        <!-- theme toggle -->
-                        <RowDefinition Height="Auto" />
-                        <!-- exit -->
-                        <RowDefinition Height="Auto" />
-
-                    </Grid.RowDefinitions>
-                    <Grid.Style >
-                        <Style TargetType="{x:Type Grid}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ElementName=Hamburger, Path=(wpfExt:IsActiveBehavior.IsActive)}" Value="True">
-                                    <Setter Property="Width"  Value="Auto"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding ElementName=Hamburger, Path=(wpfExt:IsActiveBehavior.IsActive)}" Value="False">
-                                    <Setter Property="Width"  Value="40"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Grid.Style>
                     <Grid.Resources>
                         <Style x:Key="NavButton" TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
                             <Setter Property="Appearance" Value="Transparent"/>
@@ -74,9 +141,9 @@
                             <Setter Property="Height" Value="40"/>
                             <Setter Property="VerticalAlignment" Value="Center"/>
                             <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Margin" Value="0,0,2,0"></Setter>
+                            <Setter Property="Margin" Value="0,0,2,0"/>
                             <Setter Property="FontSize" Value="20"/>
-                            <Setter Property="IconForeground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"></Setter>
+                            <Setter Property="IconForeground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="{x:Type ui:Button}">
@@ -116,10 +183,8 @@
                                                     <Condition Property="wpfExt:IsActiveBehavior.IsActive" Value="True" />
                                                     <Condition Property="wpfExt:IsActiveBehavior.ShowIndicator" Value="True" />
                                                 </MultiTrigger.Conditions>
-                                                <MultiTrigger.Setters>
-                                                    <Setter TargetName="IsActiveRectangle" Property="Opacity" Value="1.0" />
-                                                    <Setter TargetName="Container" Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}"/>
-                                                </MultiTrigger.Setters>
+                                                <Setter TargetName="IsActiveRectangle" Property="Opacity" Value="1.0" />
+                                                <Setter TargetName="Container" Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}"/>
                                             </MultiTrigger>
 
                                             <Trigger Property="IsMouseOver" Value="True">
@@ -130,10 +195,8 @@
                                                     <Condition Property="IsMouseOver" Value="True" />
                                                     <Condition Property="wpfExt:IsActiveBehavior.IsActive" Value="False" />
                                                 </MultiTrigger.Conditions>
-                                                <MultiTrigger.Setters>
-                                                    <Setter TargetName="ItemIcon" Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
-                                                    <Setter TargetName="ContentText" Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
-                                                </MultiTrigger.Setters>
+                                                <Setter TargetName="ItemIcon" Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
+                                                <Setter TargetName="ContentText" Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
                                             </MultiTrigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -142,6 +205,44 @@
 
                         </Style>
                     </Grid.Resources>
+
+                    <Grid.RowDefinitions>
+                        <!-- hamburger -->
+                        <RowDefinition Height="Auto" />
+                        <!-- hide popup -->
+                        <RowDefinition Height="Auto" />
+                        <!-- spacer -->
+                        <RowDefinition Height="*" MinHeight="80" />
+                        <!-- toggle desktop -->
+                        <RowDefinition Height="Auto" />
+                        <!-- search -->
+                        <RowDefinition Height="Auto" />
+                        <!-- pins ("Start menu like") -->
+                        <RowDefinition Height="Auto" />
+                        <!-- applications/document ("Start menu like") -->
+                        <RowDefinition Height="Auto" />
+                        <!-- settings -->
+                        <RowDefinition Height="Auto" />
+                        <!-- theme colors -->
+                        <RowDefinition Height="Auto" />
+                        <!-- theme toggle -->
+                        <RowDefinition Height="Auto" />
+                        <!-- exit -->
+                        <RowDefinition Height="Auto" />
+
+                    </Grid.RowDefinitions>
+                    <Grid.Style >
+                        <Style TargetType="{x:Type Grid}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding (wpfExt:IsActiveBehavior.IsActive), ElementName=Hamburger}" Value="True">
+                                    <Setter Property="Width"  Value="Auto"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding (wpfExt:IsActiveBehavior.IsActive), ElementName=Hamburger}" Value="False">
+                                    <Setter Property="Width"  Value="40"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
 
                     <ui:Button Grid.Column="0" Grid.Row="0" x:Name="Hamburger" Click="HamburgerClick" Content="AppSwitcherBar" FontWeight="Bold"
                                wpfExt:IsActiveBehavior.ShowIndicator="False" wpfExt:IsActiveBehavior.IsActive="False">
@@ -167,24 +268,29 @@
                                wpfExt:IsActiveBehavior.IsActive="{Binding IsInSearch}"
                                Command="{Binding ShowSearchCommand}"/>
 
-                    <ui:Button Grid.Column="0" Grid.Row="5" Style="{DynamicResource NavButton}" Icon="AppFolder24" Content="{DynamicResource StrMenuPopupApps}" 
+                    <ui:Button Grid.Column="0" Grid.Row="5" Style="{DynamicResource NavButton}" Icon="Pin24" Content="{DynamicResource StrMenuPopupPins}" 
+                               wpfExt:IsActiveBehavior.IsActive="{Binding IsInPins}"
+                               Command="{Binding ShowPinsCommand}"
+                               Visibility="{Binding IsPinsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <ui:Button Grid.Column="0" Grid.Row="6" Style="{DynamicResource NavButton}" Icon="AppFolder24" Content="{DynamicResource StrMenuPopupApps}" 
                                wpfExt:IsActiveBehavior.IsActive="{Binding IsInApps}"
                                Command="{Binding ShowAppsCommand}"/>
 
-                    <ui:Button Grid.Column="0" Grid.Row="6" Style="{DynamicResource NavButton}" Icon="Settings24" Content="{DynamicResource StrMenuPopupSettings}"
+                    <ui:Button Grid.Column="0" Grid.Row="7" Style="{DynamicResource NavButton}" Icon="Settings24" Content="{DynamicResource StrMenuPopupSettings}"
                                wpfExt:IsActiveBehavior.IsActive="{Binding IsInSettings}"
                                Command="{Binding ShowSettingsCommand}"/>
 
-                    <ui:Button Grid.Column="0" Grid.Row="7" Style="{DynamicResource NavButton}" Icon="Color24" Content="{DynamicResource StrMenuPopupColors}"
+                    <ui:Button Grid.Column="0" Grid.Row="8" Style="{DynamicResource NavButton}" Icon="Color24" Content="{DynamicResource StrMenuPopupColors}"
                                wpfExt:IsActiveBehavior.IsActive="{Binding IsInColors}"
                                Command="{Binding ShowColorsCommand}"
                                Visibility="{Binding IsColorsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                    <ui:Button Grid.Column="0" Grid.Row="8" Style="{DynamicResource NavButton}" Icon="DarkTheme24" Content="{DynamicResource StrMenuPopupToggleTheme}"
+                    <ui:Button Grid.Column="0" Grid.Row="9" Style="{DynamicResource NavButton}" Icon="DarkTheme24" Content="{DynamicResource StrMenuPopupToggleTheme}"
                                Command="{Binding ToggleThemeCommand}" />
 
-                    <ui:Button Grid.Column="0" Grid.Row="9" Style="{DynamicResource NavButton}" Icon="Power24" Content="{DynamicResource StrMenuPopupExit}"
-                               Command="{Binding Path=CloseAppBarCommand,RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}}"/>
+                    <ui:Button Grid.Column="0" Grid.Row="10" Style="{DynamicResource NavButton}" Icon="Power24" Content="{DynamicResource StrMenuPopupExit}"
+                               Command="{Binding CloseAppBarCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}}"/>
 
                 </Grid>
 
@@ -219,13 +325,13 @@
                                           ItemsSource="{Binding Edges}" 
                                           DisplayMemberPath="Name"
                                           SelectedValuePath="DockMode"
-                                          SelectedValue="{Binding Path=DockMode,RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}, Mode=TwoWay}" 
+                                          SelectedValue="{Binding DockMode, Mode=TwoWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}}" 
                                           Margin="3" VerticalAlignment="Center" FontSize="14" Padding="2,6,2,6"  />
 
                                 <ui:SymbolIcon Grid.Column="0" Grid.Row="2" Symbol="Desktop20" VerticalAlignment="Center" Margin="1" FontSize="24"/>
                                 <ComboBox Grid.Column="1" Grid.Row="2"
                                           ItemsSource="{Binding AllMonitors}" 
-                                          SelectedItem="{Binding Path=Monitor,RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}, Mode=TwoWay}"
+                                          SelectedItem="{Binding Monitor, Mode=TwoWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}}"
                                           Margin="3" VerticalAlignment="Center" FontSize="14" Padding="10,6,10,6"  />
 
                                 <ui:SymbolIcon Grid.Column="0" Grid.Row="3" Symbol="AppsList20" VerticalAlignment="Center" Margin="1" FontSize="24"/>
@@ -239,11 +345,11 @@
                                           Visibility="{Binding RunOnWinStartupAvailable, Converter={StaticResource BooleanToVisibilityConverter}}" 
                                           FontSize="14" />
                                 <TextBlock Grid.Column="1" Grid.Row="4"  Text="{DynamicResource StrMenuPopupSettingsRunOnStartup}" FontSize="14" Margin="3"
-                                           Visibility="{Binding Path=RunOnWinStartupAvailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                           Visibility="{Binding RunOnWinStartupAvailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                                 <CheckBox   Grid.Column="0" Grid.Row="5" MinWidth="32"
                                             Margin="1" VerticalAlignment="Center" HorizontalAlignment="Left"
-                                            IsChecked="{Binding Path=IsAutoSized,RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}, Mode=TwoWay}" FontSize="14"/>
+                                            IsChecked="{Binding IsAutoSized, Mode=TwoWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type appBar:AppBarWindow}}}" FontSize="14"/>
                                 <TextBlock Grid.Column="1" Grid.Row="5"  Text="{DynamicResource StrMenuPopupSettingsAutoSize}" FontSize="14" Margin="3"/>
                             </Grid>
 
@@ -313,26 +419,6 @@
                                 <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled" >
                                     <Menu Margin="5" ItemsSource="{Binding SearchResults}"
                                       Background="Transparent" IsMainMenu="False">
-
-                                        <Menu.ItemContainerStyle>
-                                            <Style TargetType="{x:Type MenuItem}" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                                <Setter Property="Command" Value="{Binding Command}"/>
-                                                <Style.Triggers>
-                                                    <Trigger Property="Role" Value="TopLevelItem">
-                                                        <Setter Property="Template" Value="{DynamicResource MenuItemTemplate}" />
-                                                    </Trigger>
-                                                    <DataTrigger Binding="{Binding ItemType}" Value="Header">
-                                                        <Setter Property="Template" Value="{DynamicResource MenuItemHeaderTemplate}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding ItemType}" Value="MoreItems">
-                                                        <Setter Property="Template" Value="{DynamicResource MenuItemMoreItemsTemplate}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding ItemType}" Value="Separator">
-                                                        <Setter Property="Template" Value="{DynamicResource MenuItemSeparatorTemplate}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Menu.ItemContainerStyle>
 
                                         <Menu.Resources>
                                             <Style TargetType="{x:Type Menu}" BasedOn="{StaticResource {x:Type Menu}}">
@@ -471,33 +557,59 @@
                                                 </Grid>
                                             </DataTemplate>
                                         </Menu.Resources>
+
+                                        <Menu.ItemContainerStyle>
+                                            <Style TargetType="{x:Type MenuItem}" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                <Setter Property="Command" Value="{Binding Command}"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="Role" Value="TopLevelItem">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemTemplate}" />
+                                                    </Trigger>
+                                                    <DataTrigger Binding="{Binding ItemType}" Value="Header">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemHeaderTemplate}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ItemType}" Value="MoreItems">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemMoreItemsTemplate}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ItemType}" Value="Separator">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemSeparatorTemplate}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Menu.ItemContainerStyle>
+
                                     </Menu>
                                 </ScrollViewer>
-                                <Grid Grid.Row="1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <ui:SymbolIcon Grid.Column="0" Margin="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                <Border Grid.Row="1"
+                                        Margin="3,8,3,0"
+                                        BorderThickness="0,1,0,0"
+                                        BorderBrush="{ui:ThemeResource TextFillColorDisabledBrush}">
+                                    <Grid Margin="3,5,3,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ui:SymbolIcon Grid.Column="0" Margin="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                    FontSize="20"
                                                    Symbol="Search24" />
-                                    <TextBox Grid.Column="1" MinWidth="120"
+                                        <TextBox Grid.Column="1" MinWidth="120"
                                              Margin="1"
                                              VerticalAlignment="Center"
                                              ignore:xName="SearchBox"
                                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                              wpfExt:VisibleFocusBehavior.FocusOnVisible="True"
                                              wpfExt:KeyCommand.Command="{Binding SearchSpecialKeyCommand}">
-                                        <wpfExt:KeyCommand.Keys>
-                                            <Key>Enter</Key>
-                                            <Key>Escape</Key>
-                                            <Key>Up</Key>
-                                            <Key>Down</Key>
-                                            <Key>PageUp</Key>
-                                            <Key>PageDown</Key>
-                                        </wpfExt:KeyCommand.Keys>
-                                    </TextBox>
-                                </Grid>
+                                            <wpfExt:KeyCommand.Keys>
+                                                <Key>Enter</Key>
+                                                <Key>Escape</Key>
+                                                <Key>Up</Key>
+                                                <Key>Down</Key>
+                                                <Key>PageUp</Key>
+                                                <Key>PageDown</Key>
+                                            </wpfExt:KeyCommand.Keys>
+                                        </TextBox>
+                                    </Grid>
+                                </Border>
                             </Grid>
 
                             <!-- Apps panel -->
@@ -506,6 +618,7 @@
                                        Visibility="{Binding IsInApps, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <ScrollViewer Grid.Row="0" Grid.Column="0" HorizontalScrollBarVisibility="Disabled"  >
                                     <Menu Margin="5" ItemsSource="{Binding AppList}"
@@ -513,23 +626,6 @@
                                       wpfExt:VisibleFocusBehavior.FocusOnVisible="True"
                                       wpfExt:KeyCommand.Command="{Binding AppListKeyCommand}"
                                       wpfExt:KeyCommand.IncludeLetters="True">
-
-                                        <Menu.ItemContainerStyle>
-                                            <Style TargetType="{x:Type MenuItem}" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                                <Setter Property="Command" Value="{Binding Command}"/>
-                                                <Style.Triggers>
-                                                    <Trigger Property="Role" Value="TopLevelItem">
-                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListTemplate}" />
-                                                    </Trigger>
-                                                    <DataTrigger Binding="{Binding ItemType}" Value="Category">
-                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListCategoryTemplate}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding ItemType}" Value="Folder">
-                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListFolderTemplate}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Menu.ItemContainerStyle>
 
                                         <Menu.Resources>
                                             <Style TargetType="{x:Type Menu}" BasedOn="{StaticResource {x:Type Menu}}">
@@ -682,9 +778,6 @@
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
-                                                    <Image Grid.Column="0" Margin="3,0" Source="{Binding Icon}" VerticalAlignment="Center" Width="16" Height="16"/>
-                                                    <TextBlock Grid.Column="1" Margin="2,0" Text="{Binding Title}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                                                     <Grid.Style>
                                                         <Style TargetType="{x:Type Grid}">
                                                             <Style.Triggers>
@@ -697,11 +790,325 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Grid.Style>
+                                                    <Image Grid.Column="0" Margin="3,0" Source="{Binding Icon}" VerticalAlignment="Center" Width="16" Height="16"/>
+                                                    <TextBlock Grid.Column="1" Margin="2,0" Text="{Binding Title}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                                                 </Grid>
                                             </DataTemplate>
                                         </Menu.Resources>
+
+                                        <Menu.ItemContainerStyle>
+                                            <Style TargetType="{x:Type MenuItem}" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                <Setter Property="Command" Value="{Binding Command}"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="Role" Value="TopLevelItem">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListTemplate}" />
+                                                    </Trigger>
+                                                    <DataTrigger Binding="{Binding ItemType}" Value="Category">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListCategoryTemplate}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ItemType}" Value="Folder">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListFolderTemplate}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Menu.ItemContainerStyle>
+
                                     </Menu>
                                 </ScrollViewer>
+                                <Border Grid.Row="1"
+                                        Margin="3,8,3,0"
+                                        BorderThickness="0,1,0,0"
+                                        BorderBrush="{ui:ThemeResource TextFillColorDisabledBrush}">
+                                    <Grid Margin="3,5,3,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <ui:Button Grid.Column="0" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Documents }" 
+                                                   Icon="Document24" />
+                                        <ui:Button Grid.Column="1" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Pictures }"
+                                                   Icon="Image24" />
+                                        <ui:Button Grid.Column="2" Style="{StaticResource AppShortcutButtonStyle}" 
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Downloads }" 
+                                                   Icon="ArrowDownload24" />
+
+                                        <ui:Button Grid.Column="3" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Run }" 
+                                                   Icon="PersonRunning20" 
+                                                   Margin="5,0,0,0"/>
+                                        <ui:Button Grid.Column="4" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Console }"
+                                                   Icon="WindowConsole20" />
+                                        <ui:Button Grid.Column="5" Style="{StaticResource AppShortcutButtonStyle}" 
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.DeviceAndPrinters}" 
+                                                   Icon="Print20" />
+                                        <ui:Button Grid.Column="6" Style="{StaticResource AppShortcutButtonStyle}" 
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Settings}" 
+                                                   Icon="WindowSettings20" />
+
+
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <!-- Pins panel -->
+                            <Grid  Margin="3"
+                                       d:Visibility="Visible"
+                                       Visibility="{Binding IsInPins, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <ScrollViewer Grid.Row="0" Grid.Column="0" HorizontalScrollBarVisibility="Disabled"  >
+                                    <Menu Margin="5" ItemsSource="{Binding StartPinList}"
+                                      Background="Transparent" IsMainMenu="False" Focusable="True"
+                                      wpfExt:VisibleFocusBehavior.FocusOnVisible="True" >
+
+                                        <Menu.Resources>
+                                            <Style TargetType="{x:Type Menu}" BasedOn="{StaticResource {x:Type Menu}}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPinViewIcons}" Value="True">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="{x:Type Menu}">
+                                                                    <Border
+                                                            Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}" >
+                                                                        <WrapPanel
+                                                                ClipToBounds="True"
+                                                                IsItemsHost="True"
+                                                                Orientation="Horizontal" />
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsPinViewList}" Value="True">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="{x:Type Menu}">
+                                                                    <Border
+                                                                        Background="{TemplateBinding Background}"
+                                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                                        BorderThickness="{TemplateBinding BorderThickness}" >
+                                                                        <StackPanel
+                                                                            ClipToBounds="True"
+                                                                            IsItemsHost="True"
+                                                                            Orientation="Vertical" />
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                            <ControlTemplate x:Key="MenuItemAppListTemplate" TargetType="{x:Type MenuItem}">
+                                                <Border x:Name="Border"
+                                                    Margin="3"
+                                                    Background="Transparent"
+                                                    CornerRadius="3">
+                                                    <Grid Margin="8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <ContentPresenter
+                                                        x:Name="HeaderPresenter"
+                                                        Grid.Column="0"
+                                                        VerticalAlignment="Center"
+                                                        ContentSource="Header"
+                                                        RecognizesAccessKey="True"
+                                                        TextElement.Foreground="{TemplateBinding Foreground}" />
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsHighlighted" Value="True">
+                                                        <Setter TargetName="Border" Property="Background" Value="{ui:ThemeResource SubtleFillColorSecondaryBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="Header" Value="{x:Null}">
+                                                        <Setter TargetName="HeaderPresenter" Property="Visibility" Value="Collapsed" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorDisabledBrush}"/>
+                                                        <Setter TargetName="Border" Property="Visibility" Value="Collapsed"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+
+                                            <ControlTemplate x:Key="MenuItemAppListFolderTemplate" TargetType="{x:Type MenuItem}">
+                                                <Border x:Name="Border"
+                                                    HorizontalAlignment="Stretch"
+                                                    Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Panel}}}"
+                                                    Margin="3"
+                                                    Background="Transparent"
+                                                    CornerRadius="3">
+                                                    <Grid Margin="8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <ContentPresenter
+                                                        x:Name="HeaderPresenter"
+                                                        Grid.Column="0"
+                                                        VerticalAlignment="Center"
+                                                        ContentSource="Header"
+                                                        RecognizesAccessKey="True"
+                                                        TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsHighlighted" Value="True">
+                                                        <Setter TargetName="Border" Property="Background" Value="{ui:ThemeResource SubtleFillColorSecondaryBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="Header" Value="{x:Null}">
+                                                        <Setter TargetName="HeaderPresenter" Property="Visibility" Value="Collapsed" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorDisabledBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+
+                                            </ControlTemplate>
+
+                                            <DataTemplate DataType="{x:Type appList:AppListFolder}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="25"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="25"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <ui:SymbolIcon Grid.Column="0" Margin="3,0" VerticalAlignment="Center" Width="16" Height="16" Symbol="Folder16"/>
+                                                    <TextBlock Grid.Column="1" Margin="2,0" Text="{Binding Title}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                                    <ui:SymbolIcon Grid.Column="2" Margin="3,0" VerticalAlignment="Center" Width="16" Height="16" Symbol="ChevronDown16"
+                                                                   Visibility="{Binding IsCollapsed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    <ui:SymbolIcon Grid.Column="2" Margin="3,0" VerticalAlignment="Center" Width="16" Height="16" Symbol="ChevronUp16"
+                                                                   Visibility="{Binding IsExpanded, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </DataTemplate>
+
+                                            <DataTemplate DataType="{x:Type appList:AppListInstalledItem}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="25"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.Style>
+                                                        <Style TargetType="{x:Type Grid}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsInFolder}" Value="True">
+                                                                    <Setter Property="Margin" Value="8,0,0,0"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsVisible}" Value="False">
+                                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Grid.Style>
+                                                    <Image Grid.Column="0" Source="{Binding Icon}" VerticalAlignment="Center" >
+                                                        <Image.Style>
+                                                            <Style TargetType="{x:Type Image}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Source={StaticResource ViewModelLocator}, Path=MenuPopupViewModel.IsPinViewIcons}" Value="false">
+                                                                        <Setter Property="Width" Value="16" />
+                                                                        <Setter Property="Height" Value="16" />
+                                                                        <Setter Property="Margin" Value="3,0"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Source={StaticResource ViewModelLocator}, Path=MenuPopupViewModel.IsPinViewIcons}" Value="true">
+                                                                        <Setter Property="Width" Value="24" />
+                                                                        <Setter Property="Height" Value="24" />
+                                                                        <Setter Property="Margin" Value="1"/>
+                                                                        <Setter Property="ToolTip" Value="{Binding Title}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Image.Style>
+                                                    </Image>
+                                                    <TextBlock Grid.Column="1" Margin="2,0" Text="{Binding Title}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                                               Visibility="{Binding MenuPopupViewModel.IsPinViewList, Converter={StaticResource BooleanToVisibilityConverter}, Source={StaticResource ViewModelLocator}}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </Menu.Resources>
+                                        <Menu.ItemContainerStyle>
+                                            <Style TargetType="{x:Type MenuItem}" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                <Setter Property="Command" Value="{Binding Command}"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="Role" Value="TopLevelItem">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListTemplate}" />
+                                                    </Trigger>
+                                                    <DataTrigger Binding="{Binding ItemType}" Value="Folder">
+                                                        <Setter Property="Template" Value="{DynamicResource MenuItemAppListFolderTemplate}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Menu.ItemContainerStyle>
+
+                                    </Menu>
+                                </ScrollViewer>
+                                <Border Grid.Row="1"
+                                        Margin="3,8,3,0"
+                                        BorderThickness="0,1,0,0"
+                                        BorderBrush="{ui:ThemeResource TextFillColorDisabledBrush}">
+                                    <Grid Margin="3,5,3,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <ui:Button Grid.Column="0" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Documents}" 
+                                                   Icon="Document24" />
+                                        <ui:Button Grid.Column="1" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Pictures}"
+                                                   Icon="Image24" />
+                                        <ui:Button Grid.Column="2" Style="{StaticResource AppShortcutButtonStyle}" 
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Downloads}" 
+                                                   Icon="ArrowDownload24" />
+
+                                        <ui:Button Grid.Column="3" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Run}" 
+                                                   Icon="PersonRunning20" 
+                                                   Margin="5,0,0,0"/>
+                                        <ui:Button Grid.Column="4" Style="{StaticResource AppShortcutButtonStyle}"
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Console}"
+                                                   Icon="WindowConsole20" />
+                                        <ui:Button Grid.Column="5" Style="{StaticResource AppShortcutButtonStyle}" 
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.DeviceAndPrinters}" 
+                                                   Icon="Print20" />
+                                        <ui:Button Grid.Column="6" Style="{StaticResource AppShortcutButtonStyle}" 
+                                                   CommandParameter="{x:Static viewModel:MenuPopupViewModel+ShortcutType.Settings}" 
+                                                   Icon="WindowSettings20" />
+                                        <StackPanel Grid.Column="8" HorizontalAlignment="Right" Orientation="Horizontal">
+                                            <ToggleButton IsChecked="{Binding IsPinViewIcons}"
+                                                          Style="{StaticResource ToggleViewButtonStyle}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
                             </Grid>
                         </Grid>
                     </Border>

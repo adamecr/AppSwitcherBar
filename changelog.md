@@ -3,6 +3,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1.0] - 2022-12-21 ##
+### Added ###
+- **Applications pinned to Windows Start are available in menu popup**
+- **Audio device info and settings**
+  - See the **mute and volume state** of audio capture and render devices
+  - See whether the **audio device is being used** - for example whether any application captures the audio from mike
+  - Toggle mute and adjust volume of audio devices
+  - Change the default audio capture and render devices
+
+- **Clock panel**
+  - See the current date and time in customizable format
+  - See the **date and time in time zones** defined in settings
+
+- Common shortcuts in application list panel and pinned apps panel
+  - Documents, Pictures, Downloads, Run, Console/Terminal, Devices, Windows Settings
+- Close window button in thumbnail 
+- Search ranking of applications 
+- Application settings `ShowAudioControls`, `AudioControlsPopupWidth`, `ShowClock`, `ClockWidth`, `ClockPopupWidth`, `RefreshClockIntervalMs`, `ClockDateFormat`, `ClockTimeFormat`, `ClockTimeZones`, `ClockTimeZoneDateFormat`, `ClockTimeZoneTimeFormat`, `ClockLongFormat`
+- Feature flags `EnableRunInfoFromWindowsPrefetch`, `EnableStartMenuPins`, `EnableContextMenuOnThumbnail`
+- Translations `AudioIsDefault`, `AudioSetDefault`, `AudioIsCommDefault`, `MenuPopupPins`
+
+### Fixed ###
+- [UI not responsive when some app does not respond to SendMessage](https://github.com/adamecr/AppSwitcherBar/issues/6) - sending the windows message with timeout
+
 ## [2.0.1] - 2022-11-28 ##
 ### Fixed ###
 - [Settings reset on start in version 2.0](https://github.com/adamecr/AppSwitcherBar/issues/5) - the desing time settings (used by WPF designer) are not saved at all now
@@ -97,6 +121,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added ###
 - Initial application release
 
+[2.1.0]: https://github.com/adamecr/AppSwitcherBar/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/adamecr/AppSwitcherBar/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/adamecr/AppSwitcherBar/compare/v1.3.1...v2.0.0
 [1.3.1]: https://github.com/adamecr/AppSwitcherBar/compare/v1.3.0...v1.3.1

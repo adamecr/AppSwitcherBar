@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System;
 using net.adamec.ui.AppSwitcherBar.Dto;
 using net.adamec.ui.AppSwitcherBar.Win32.NativeEnums;
 using net.adamec.ui.AppSwitcherBar.Win32.Services;
@@ -77,7 +77,8 @@ internal static class ShellItemExtensions
             LinkArguments = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Link_Arguments),
             PackageIconResource = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SmallLogoPath),
             RunFlags = shellItem.GetPropertyValue<uint>(PropertyKey.PKEY_AppUserModel_RunFlags),
-            TileSuiteDisplayName = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SuiteDisplayName)
+            TileSuiteDisplayName = shellItem.GetPropertyValue<string>(PropertyKey.PKEY_Tile_SuiteDisplayName),
+            Keywords = shellItem.GetPropertyValue<string[] >(PropertyKey.PKEY_Keywords)??Array.Empty<string>()
         };
 
         return retVal;
